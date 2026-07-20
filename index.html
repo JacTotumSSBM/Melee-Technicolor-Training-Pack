@@ -1,0 +1,1876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Overlay Pack — JacTotum</title>
+<meta name="description" content="Gecko codes that color-code your character's state in Melee — dash/run, autocancel windows, fastfall, damage/disadvantage, shieldstun, and missed L-cancels.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#131519;
+    --bg-soft:#17191f;
+    --panel:#1b1e25;
+    --panel-2:#20242c;
+    --line:#2a2e37;
+    --line-soft:#22252d;
+    --text:#e9ebf0;
+    --text-dim:#9aa0ac;
+    --text-faint:#5f6570;
+
+    --mono:'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+    --display:'Space Grotesk', sans-serif;
+    --body:'Manrope', sans-serif;
+
+    --c-dash:#b57bff;
+    --c-run:#ff9a3d;
+    --c-ac:#49e6ff;
+    --c-actionable:#52ff8c;
+    --c-fastfall:#ffe066;
+    --c-hitstun:#ff4fb0;
+    --c-shieldstun:#f7f9fc;
+    --c-lcancel:#ff5252;
+	--c-TechChase:#00A693;
+
+    --radius:3px;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--body);
+    font-size:16px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  h1,h2,h3{font-family:var(--display); margin:0; letter-spacing:-0.01em;}
+  p{margin:0 0 0.9em; color:var(--text-dim);}
+  a{color:inherit;}
+  code, pre{font-family:var(--mono);}
+  ::selection{background:#3a3f4c;}
+  :focus-visible{outline:2px solid #7d8aff; outline-offset:2px;}
+
+  .wrap{max-width:1140px; margin:0 auto; padding:0 24px;}
+
+  /* ---------- header ---------- */
+  header.site{
+    position:sticky; top:0; z-index:40;
+    background:rgba(19,21,25,0.86);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line-soft);
+  }
+  .site-inner{
+    max-width:1080px; margin:0 auto; padding:14px 28px;
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+  }
+  .site-id{
+    font-family:var(--mono); font-size:12.5px; letter-spacing:0.09em;
+    color:var(--text-dim); display:flex; align-items:center; gap:8px;
+  }
+  .site-id b{color:var(--text); font-weight:700;}
+  .site-id .sep{color:var(--text-faint);}
+  .badges{display:flex; gap:8px;}
+  .badge{
+    font-family:var(--mono); font-size:11px; letter-spacing:0.06em;
+    color:var(--text-dim); border:1px solid var(--line); border-radius:20px;
+    padding:4px 10px; white-space:nowrap;
+  }
+  nav.subnav{
+    border-bottom:1px solid var(--line-soft);
+    background:var(--bg-soft);
+  }
+  nav.subnav .wrap{
+    display:flex; gap:22px; padding:10px 28px; overflow-x:auto;
+  }
+  nav.subnav a{
+    font-family:var(--mono); font-size:12px; letter-spacing:0.06em;
+    color:var(--text-faint); text-decoration:none; white-space:nowrap;
+  }
+  nav.subnav a:hover{color:var(--text-dim);}
+
+  /* ---------- hero ---------- */
+  .hero{padding:72px 0 56px; border-bottom:1px solid var(--line-soft);}
+  .hero-grid{
+    display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,0.85fr); gap:40px; align-items:center;
+  }
+  .eyebrow{
+    font-family:var(--mono); font-size:12px; letter-spacing:0.14em;
+    color:var(--text-faint); text-transform:uppercase; margin-bottom:18px;
+  }
+  h1.title{
+    font-size:clamp(36px, 5.4vw, 58px); font-weight:700; line-height:1.02;
+    text-transform:uppercase; margin-bottom:22px;
+  }
+  h1.title span{display:block;}
+  h1.title .dim{color:var(--text-faint);}
+  .hero p.lead{
+    font-size:16.5px; max-width:46ch; margin-bottom:26px;
+  }
+  .hero-meta{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px;}
+
+  /* legend strip */
+  .legend{
+    margin-top:30px; display:flex; flex-wrap:wrap; gap:8px 10px;
+  }
+  .legend a{
+    display:flex; align-items:center; gap:7px;
+    font-family:var(--mono); font-size:11.5px; letter-spacing:0.03em;
+    color:var(--text-dim); text-decoration:none;
+    border:1px solid var(--line); border-radius:20px;
+    padding:6px 12px 6px 8px;
+    transition:border-color .15s ease, color .15s ease;
+  }
+  .legend a:hover{border-color:var(--line-soft); color:var(--text);}
+  .dot{width:9px; height:9px; border-radius:50%; flex:none; box-shadow:0 0 8px currentColor;}
+  .dot.shieldstun{box-shadow:0 0 8px rgba(255,255,255,0.5); outline:1px solid #3a3d44; outline-offset:1px;}
+
+  /* animated state demo */
+  .demo{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:18px;
+    border:1px solid var(--line); border-radius:var(--radius);
+    background:
+      linear-gradient(var(--panel), var(--panel)) padding-box,
+      repeating-linear-gradient(45deg, var(--line-soft) 0 1px, transparent 1px 14px) padding-box;
+    background-color:var(--panel);
+    padding:44px 20px;
+    position:relative;
+  }
+  .demo::before, .demo::after,
+  .demo .corner-br{content:''; position:absolute; width:16px; height:16px; pointer-events:none;}
+  .demo::before{top:10px; left:10px; border-top:1px solid var(--text-faint); border-left:1px solid var(--text-faint);}
+  .demo::after{top:10px; right:10px; border-top:1px solid var(--text-faint); border-right:1px solid var(--text-faint);}
+  .demo .corner-br{bottom:10px; left:10px; border-bottom:1px solid var(--text-faint); border-left:1px solid var(--text-faint);}
+  .demo .corner-bl{position:absolute; bottom:10px; right:10px; width:16px; height:16px; border-bottom:1px solid var(--text-faint); border-right:1px solid var(--text-faint);}
+  .marker{
+    width:64px; height:64px; border-radius:10px;
+    background:var(--c-actionable);
+    transition:background-color .5s ease, box-shadow .5s ease;
+    box-shadow:0 0 34px 2px var(--c-actionable);
+    position:relative;
+  }
+  .marker::after{
+    content:''; position:absolute; left:14px; right:14px; top:24px; height:3px;
+    background:rgba(19,21,25,0.55); border-radius:2px;
+  }
+  .title .tc{display:inline; text-shadow:0 0 24px currentColor;}
+  .marker.gnw{
+    width:auto; height:auto; background:transparent; border-radius:0; box-shadow:none;
+  }
+  .marker.gnw::after{display:none;}
+  .marker.gnw canvas{
+    display:block; height:120px; transition:filter .5s ease;
+  }
+  .gnw-hint{
+    font-family:var(--mono); font-size:10.5px; color:var(--text-faint);
+    letter-spacing:0.03em; opacity:0.8;
+  }
+  .hero-eyebrow{
+    font-size:21px; letter-spacing:0.26em; color:var(--text-dim);
+    margin-bottom:14px; font-weight:600;
+  }
+  .demo-label{
+    font-family:var(--mono); font-size:12px; letter-spacing:0.14em;
+    color:var(--c-actionable); transition:color .5s ease; text-transform:uppercase;
+  }
+  .demo-caption{
+    font-family:var(--mono); font-size:11px; color:var(--text-faint); letter-spacing:0.03em;
+  }
+
+  /* ---------- section shell ---------- */
+  section{padding:52px 0; border-bottom:1px solid var(--line-soft);}
+  .section-head{margin-bottom:28px; max-width:64ch;}
+  .section-head .eyebrow{margin-bottom:10px;}
+  h2.section-title{font-size:26px; text-transform:uppercase; margin-bottom:12px;}
+
+  /* about / architecture */
+  .about-grid{display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,0.9fr); gap:40px; align-items:start;}
+  .spec{
+    border:1px solid var(--line); border-radius:var(--radius); background:var(--panel);
+    padding:20px 22px;
+  }
+  .spec-row{
+    display:flex; justify-content:space-between; gap:16px;
+    padding:10px 0; border-bottom:1px solid var(--line-soft);
+    font-family:var(--mono); font-size:12.5px;
+  }
+  .spec-row:last-child{border-bottom:none;}
+  .spec-row .k{color:var(--text-faint); letter-spacing:0.04em;}
+  .spec-row .v{color:var(--text); text-align:right;}
+  .spec-title{
+    font-family:var(--mono); font-size:11px; letter-spacing:0.12em; color:var(--text-faint);
+    margin-bottom:10px; text-transform:uppercase;
+  }
+
+  /* cards */
+  .hooks-grid{display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:16px;}
+  .modules-grid{display:grid; grid-template-columns:minmax(0,1fr); gap:16px;}
+
+  .card{
+    border:1px solid var(--line); border-radius:var(--radius); background:var(--panel);
+    padding:18px; position:relative; scroll-margin-top:96px; min-width:0;
+  }
+  .hook-card{padding-top:20px;}
+  .hook-card::before, .hook-card::after{
+    content:''; position:absolute; width:14px; height:14px;
+  }
+  .hook-card::before{top:-1px; left:-1px; border-top:1px solid var(--text-dim); border-left:1px solid var(--text-dim);}
+  .hook-card::after{bottom:-1px; right:-1px; border-bottom:1px solid var(--text-dim); border-right:1px solid var(--text-dim);}
+
+  .hook-kicker{
+    font-family:var(--mono); font-size:10.5px; letter-spacing:0.12em; color:var(--text-faint);
+    text-transform:uppercase; margin-bottom:8px;
+  }
+  .hook-card h3{font-size:18px; margin-bottom:6px;}
+  .hook-card p{font-size:14px; margin-bottom:16px;}
+
+  .module-card{display:grid; grid-template-columns:180px minmax(0,1fr); gap:20px; border-left:3px solid var(--line); align-items:start;}
+  .module-side{padding-top:2px; min-width:0;}
+  .module-side .dot{width:11px; height:11px; margin-bottom:10px;}
+  .module-side h3{font-size:17px; margin-bottom:8px; line-height:1.2;}
+  .module-side p{font-size:13.5px; margin-bottom:0;}
+  .module-notes{
+    list-style:none; margin:12px 0 0; padding:0; font-size:12.5px; color:var(--text-faint);
+  }
+  .module-notes li{padding-left:14px; position:relative; margin-bottom:6px;}
+  .module-notes li::before{content:'—'; position:absolute; left:0; color:var(--text-faint);}
+
+	.module-main{
+    min-width:0;
+    display:grid;
+    grid-template-columns:minmax(0,0.82fr) minmax(320px,1.18fr);
+    gap:16px;
+    align-items:start;
+	}
+  .module-main .code-block{order:1;}
+  .module-main .gif-slot{order:2;}
+
+  /* clip placeholder slot — drop matching webm in /gifs/ to fill automatically */
+	.gif-slot{
+    width:100%;
+    aspect-ratio:16 / 9;
+
+    border:1px dashed var(--line);
+    border-radius:var(--radius);
+    background:var(--bg-soft);
+
+    overflow:hidden;
+	}
+	
+	.gif-slot img,
+	.gif-slot video{
+		display:block;
+		width:100%;
+		height:100%;
+		object-fit:cover;
+	}
+  .gif-fallback{
+    display:flex; flex-direction:column; gap:4px; align-items:center; text-align:center; padding:10px;
+  }
+  .gif-fallback__tag{
+    font-family:var(--mono); font-size:10px; letter-spacing:0.12em; color:var(--text-faint); text-transform:uppercase;
+  }
+  .gif-fallback__file{
+    font-family:var(--mono); font-size:12px; color:var(--text-dim);
+  }
+
+  /* code block */
+  .code-block{
+    border:1px solid var(--line-soft); border-radius:var(--radius); overflow:hidden; background:var(--bg-soft);
+    min-width:0;
+  }
+  .code-bar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:8px 12px; border-bottom:1px solid var(--line-soft); background:var(--panel-2);
+  }
+  .code-bar .tag{
+    font-family:var(--mono); font-size:10.5px; letter-spacing:0.1em; color:var(--text-faint);
+    text-transform:uppercase;
+  }
+  .copy-btn{
+    font-family:var(--mono); font-size:11px; letter-spacing:0.03em;
+    background:transparent; color:var(--text-dim); border:1px solid var(--line);
+    border-radius:20px; padding:4px 12px; cursor:pointer;
+    transition:border-color .15s ease, color .15s ease;
+  }
+  .copy-btn:hover{border-color:var(--text-faint); color:var(--text);}
+  .code-block pre{
+    margin:0; padding:14px 16px; overflow-x:auto; min-width:0;
+    font-size:12.5px; line-height:1.65; color:#cfd3dc;
+    max-height:320px; overflow-y:auto;
+  }
+
+  /* install */
+  .steps{list-style:none; margin:0; padding:0; counter-reset:step; max-width:60ch;}
+  .steps li{
+    counter-increment:step; display:flex; gap:16px; padding:16px 0; border-top:1px solid var(--line-soft);
+  }
+  .steps li:first-child{border-top:none;}
+  .steps li::before{
+    content:counter(step, decimal-leading-zero);
+    font-family:var(--mono); font-size:13px; color:var(--text-faint); flex:none; padding-top:2px;
+  }
+  .steps p{margin:0; font-size:14.5px;}
+  .steps strong{color:var(--text); font-weight:600;}
+
+  footer{padding:36px 0 56px;}
+  .footer-row{
+    display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;
+    font-family:var(--mono); font-size:11.5px; color:var(--text-faint); letter-spacing:0.04em;
+  }
+
+  @media (max-width:860px){
+    .hero-grid, .about-grid{grid-template-columns:1fr; gap:36px;}
+    .hooks-grid{grid-template-columns:1fr;}
+    .module-card{grid-template-columns:1fr; gap:14px;}
+    .module-main{grid-template-columns:1fr;}
+    .gif-slot{height:auto; aspect-ratio:16/9;}
+    .module-side .dot{margin-bottom:4px;}
+    h1.title{font-size:clamp(30px, 9vw, 44px);}
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto;}
+    .marker, .demo-label{transition:none;}
+  }
+
+  /* ---------- color lab (per-card toggle) ---------- */
+  .mode-toggle{display:flex; gap:0; border:1px solid var(--line); border-radius:20px; overflow:hidden;}
+  .mode-toggle button{
+    font-family:var(--mono); font-size:10.5px; letter-spacing:0.06em;
+    background:transparent; color:var(--text-faint); border:none;
+    padding:4px 11px; cursor:pointer; transition:color .15s ease, background .15s ease;
+  }
+  .mode-toggle button.on{background:var(--panel-2); color:var(--text);}
+  .mode-toggle button:not(.on):hover{color:var(--text-dim);}
+  .code-bar-left{display:flex; align-items:center; gap:10px; min-width:0;}
+  .lab-controls{margin-top:14px;}
+  .lab-slot{margin-bottom:12px;}
+  .lab-slot-label{
+    font-family:var(--mono); font-size:10.5px; letter-spacing:0.1em; color:var(--text-faint);
+    text-transform:uppercase; margin-bottom:6px;
+  }
+  .lab-slot-row{display:flex; align-items:center; gap:8px;}
+  .lab-slot-row input[type=color]{
+    width:34px; height:28px; padding:0; border:1px solid var(--line); border-radius:var(--radius);
+    background:var(--bg-soft); cursor:pointer;
+  }
+  .lab-slot-row input[type=text]{
+    font-family:var(--mono); font-size:12.5px; width:92px;
+    background:var(--bg-soft); color:var(--text); border:1px solid var(--line);
+    border-radius:var(--radius); padding:5px 8px; letter-spacing:0.04em;
+  }
+  .lab-slot-row input[type=text].bad{border-color:#a04545;}
+  .lab-reset{
+    font-family:var(--mono); font-size:11px; letter-spacing:0.03em;
+    background:transparent; color:var(--text-dim); border:1px solid var(--line);
+    border-radius:20px; padding:4px 12px; cursor:pointer; margin-top:2px;
+    transition:border-color .15s ease, color .15s ease;
+  }
+  .lab-reset:hover{border-color:var(--text-faint); color:var(--text);}
+  .lab-note{font-size:12px; color:var(--text-faint); margin-top:10px; line-height:1.5;}
+  .code-block code .w-r{color:#ff9d9d;}
+  .code-block code .w-g{color:#93e6a5;}
+  .code-block code .w-b{color:#9dc1ff;}
+  .code-block code .w-r, .code-block code .w-g, .code-block code .w-b{
+    border-bottom:1px dotted currentColor;
+  }
+  .enc-table{width:100%; border-collapse:collapse; font-family:var(--mono); font-size:12px;}
+  .enc-table th, .enc-table td{
+    text-align:left; padding:8px 10px; border-bottom:1px solid var(--line-soft); color:var(--text-dim);
+    white-space:nowrap;
+  }
+  .enc-table th{color:var(--text-faint); font-weight:500; font-size:10.5px; letter-spacing:0.1em; text-transform:uppercase;}
+  .enc-table td b{color:var(--text); font-weight:500;}
+  .lab-docs{display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,0.95fr); gap:40px; align-items:start;}
+  .lab-docs code{font-size:0.92em; background:var(--bg-soft); border:1px solid var(--line-soft); border-radius:3px; padding:1px 5px;}
+  @media (max-width:860px){
+    .lab-docs{grid-template-columns:1fr; gap:28px;}
+    .code-bar{flex-wrap:wrap; gap:8px;}
+  }
+
+  /* ---------- state forge ---------- */
+  .forge-grid{display:grid; grid-template-columns:minmax(0,0.9fr) minmax(0,1.1fr); gap:20px; align-items:start;}
+  .forge-panel{border:1px solid var(--line); border-radius:var(--radius); background:var(--panel); padding:18px; min-width:0;}
+  .forge-label{font-family:var(--mono); font-size:10.5px; letter-spacing:0.12em; color:var(--text-faint); text-transform:uppercase; margin-bottom:8px;}
+  .forge-search{
+    width:100%; font-family:var(--mono); font-size:13px;
+    background:var(--bg-soft); color:var(--text); border:1px solid var(--line);
+    border-radius:var(--radius); padding:8px 10px; margin-bottom:8px;
+  }
+  .forge-selinfo{
+    display:flex; justify-content:space-between; align-items:center;
+    font-family:var(--mono); font-size:11px; color:var(--text-faint); margin-bottom:8px; min-height:20px;
+  }
+  .forge-selinfo button{
+    background:transparent; border:1px solid var(--line); border-radius:20px; color:var(--text-faint);
+    font-family:var(--mono); font-size:10.5px; padding:2px 10px; cursor:pointer;
+  }
+  .forge-selinfo button:hover{color:var(--text); border-color:var(--text-faint);}
+  .forge-list{
+    height:264px; overflow-y:auto; border:1px solid var(--line-soft); border-radius:var(--radius);
+    background:var(--bg-soft);
+  }
+  .forge-list button{
+    display:flex; width:100%; justify-content:space-between; gap:12px;
+    font-family:var(--mono); font-size:12px; text-align:left;
+    background:transparent; border:none; border-bottom:1px solid var(--line-soft);
+    color:var(--text-dim); padding:7px 10px; cursor:pointer;
+  }
+  .forge-list button:hover{background:var(--panel-2); color:var(--text);}
+  .forge-list button.sel{background:var(--panel-2); color:var(--text); border-left:3px solid var(--text-faint); padding-left:7px;}
+  .forge-list button .fid{color:var(--text-faint);}
+  .forge-list .forge-empty{font-family:var(--mono); font-size:12px; color:var(--text-faint); padding:12px;}
+  .forge-row{display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-top:14px;}
+  .forge-hooks{display:flex; gap:6px;}
+  .forge-hooks button{
+    font-family:var(--mono); font-size:10.5px; letter-spacing:0.06em;
+    background:transparent; color:var(--text-faint); border:1px solid var(--line);
+    border-radius:20px; padding:4px 11px; cursor:pointer;
+  }
+  .forge-hooks button.on{background:var(--panel-2); color:var(--text); border-color:var(--text-faint);}
+  .forge-add{
+    font-family:var(--mono); font-size:12px; letter-spacing:0.04em;
+    background:var(--panel-2); color:var(--text); border:1px solid var(--text-faint);
+    border-radius:20px; padding:6px 16px; cursor:pointer;
+  }
+  .forge-add:disabled{opacity:0.45; cursor:default;}
+  .forge-queue{list-style:none; margin:0 0 14px; padding:0;}
+  .forge-queue li{
+    display:flex; align-items:center; gap:10px; font-family:var(--mono); font-size:12px;
+    color:var(--text-dim); padding:7px 0; border-bottom:1px solid var(--line-soft);
+  }
+  .forge-queue .chip{width:12px; height:12px; border-radius:3px; flex:none; border:1px solid var(--line);}
+  .forge-queue .names{overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;}
+  .forge-queue .addr{color:var(--text-faint); margin-left:auto; flex:none;}
+  .forge-queue .rm{
+    background:transparent; border:1px solid var(--line); border-radius:20px; color:var(--text-faint);
+    font-family:var(--mono); font-size:10.5px; padding:2px 9px; cursor:pointer; flex:none;
+  }
+  .forge-queue .rm:hover{color:var(--text); border-color:var(--text-faint);}
+  .forge-queue-empty{font-family:var(--mono); font-size:12px; color:var(--text-faint); padding:10px 0 14px;}
+  .forge-preview{
+    display:flex; flex-direction:column; align-items:center; gap:9px;
+    margin-top:16px; padding:16px 10px;
+    border:1px solid var(--line-soft); border-radius:var(--radius); background:var(--bg-soft);
+  }
+  .forge-preview canvas{display:block; height:112px; transition:filter .4s ease;}
+  .forge-preview .cap{font-family:var(--mono); font-size:10.5px; color:var(--text-faint); letter-spacing:0.03em;}
+  @media (max-width:860px){ .forge-grid{grid-template-columns:1fr;} }
+
+  /* ---------- quick copy ---------- */
+  .qc{
+    margin-top:30px; border:1px solid var(--line); border-radius:var(--radius);
+    background:var(--panel); padding:14px 16px 16px;
+  }
+  .qc-head{
+    display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+    margin-bottom:12px;
+  }
+  .qc-title{
+    font-family:var(--mono); font-size:11px; letter-spacing:0.14em; color:var(--text-faint);
+    text-transform:uppercase;
+  }
+  .legend button{
+    display:flex; align-items:center; gap:7px;
+    font-family:var(--mono); font-size:11.5px; letter-spacing:0.03em;
+    color:var(--text-dim); background:transparent; cursor:pointer;
+    border:1px solid var(--line); border-radius:20px;
+    padding:6px 12px 6px 8px;
+    transition:border-color .15s ease, color .15s ease, background .15s ease;
+  }
+  .legend button:hover{border-color:var(--text-faint); color:var(--text);}
+  .legend button.on{background:var(--panel-2); border-color:var(--text-faint); color:var(--text);}
+  .legend button.on::after{content:'\2713'; font-size:10px; color:var(--text-dim); margin-left:2px;}
+  .qc .legend{margin-top:0;}
+  .qc-actions{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:14px;
+  }
+  .qc-copy{
+    font-family:var(--mono); font-size:12px; letter-spacing:0.04em;
+    background:var(--panel-2); color:var(--text); border:1px solid var(--text-faint);
+    border-radius:20px; padding:6px 16px; cursor:pointer;
+  }
+  .qc-all{
+    font-family:var(--mono); font-size:11px; letter-spacing:0.03em;
+    background:transparent; color:var(--text-dim); border:1px solid var(--line);
+    border-radius:20px; padding:4px 12px; cursor:pointer;
+    transition:border-color .15s ease, color .15s ease;
+  }
+  .qc-all:hover{border-color:var(--text-faint); color:var(--text);}
+  .qc-hint{font-family:var(--mono); font-size:11px; color:var(--text-faint); letter-spacing:0.03em;}
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="site-inner">
+    <div class="site-id">
+      <b>JACTOTUM</b><span class="sep">/</span>OVERLAY PACK
+    </div>
+    <div class="badges">
+      <span class="badge">HOOK V12</span>
+      <span class="badge">NTSC 1.02</span>
+    </div>
+  </div>
+  <nav class="subnav">
+    <div class="wrap">
+      <a href="#architecture">Architecture</a>
+      <a href="#hooks">Hooks</a>
+      <a href="#modules">Modules</a>
+      <a href="#colorlab">Color Lab</a>
+      <a href="#forge">State Forge</a>
+      <a href="#install">Install</a>
+    </div>
+  </nav>
+</header>
+
+<main>
+  <!-- ================= HERO ================= -->
+  <section class="hero" style="border-bottom:1px solid var(--line-soft); padding-bottom:56px;">
+    <div class="wrap hero-grid">
+      <div>
+        <div class="eyebrow hero-eyebrow">JacTotum's</div>
+        <h1 class="title">
+          <span>Techni<span class="tc" style="color:var(--c-dash);">c</span><span class="tc" style="color:var(--c-ac);">o</span><span class="tc" style="color:var(--c-actionable);">l</span><span class="tc" style="color:var(--c-fastfall);">o</span><span class="tc" style="color:var(--c-hitstun);">r</span></span>
+          <span class="dim">Training</span>
+          <span>Pack</span>
+        </h1>
+        <p class="lead">
+          Check this shit out.
+        </p>
+        <div class="qc" id="quickcopy">
+          <div class="qc-head">
+            <span class="qc-title">Quick Copy - build your .ini paste</span>
+            <div class="forge-hooks" id="qcHooks">
+              <button type="button" class="on" data-hook="full">Full</button>
+              <button type="button" data-hook="local">Local</button>
+              <button type="button" data-hook="opponent">Opponent</button>
+            </div>
+          </div>
+          <div class="legend" id="qcBadges">
+            <button type="button" data-mod="dash"><span class="dot" style="background:var(--c-dash); color:var(--c-dash);"></span><span class="dot" style="background:var(--c-run); color:var(--c-run);"></span>Dash / Run</button>
+            <button type="button" data-mod="ac"><span class="dot" style="background:var(--c-ac); color:var(--c-ac);"></span>AC Window</button>
+            <button type="button" data-mod="actionable"><span class="dot" style="background:var(--c-actionable); color:var(--c-actionable);"></span>Actionable</button>
+            <button type="button" data-mod="techchase"><span class="dot" style="background:#378542; color:#378542;"></span><span class="dot" style="background:#882D17; color:#882D17;"></span><span class="dot" style="background:#00A693; color:#00A693;"></span><span class="dot" style="background:#F8DFAD; color:#F8DFAD;"></span>TechChase</button>
+            <button type="button" data-mod="fastfall"><span class="dot" style="background:var(--c-fastfall); color:var(--c-fastfall);"></span>Fastfall</button>
+            <button type="button" data-mod="hitstun"><span class="dot" style="background:var(--c-hitstun); color:var(--c-hitstun);"></span>Damage / Disadvantage</button>
+            <button type="button" data-mod="shieldstun"><span class="dot shieldstun" style="background:var(--c-shieldstun); color:#fff;"></span>Shieldstun</button>
+            <button type="button" data-mod="lcancel"><span class="dot" style="background:var(--c-lcancel); color:var(--c-lcancel);"></span>Missed L-Cancel</button>
+          </div>
+          <div class="qc-actions">
+            <button class="qc-copy" id="qcCopy" type="button">Copy hook only</button>
+            <button class="qc-all" id="qcAll" type="button">Select all</button>
+            <span class="qc-hint" id="qcHint">Pick your overlays, pick a hook, one copy.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="demo" aria-hidden="true">
+        <div class="corner-br"></div><div class="corner-bl"></div>
+        <div class="marker" id="demoMarker"></div>
+        <div class="demo-label" id="demoLabel">ACTIONABLE</div>
+        <div class="demo-caption">live preview — one color, one state</div>
+        <div class="gnw-hint" id="gnwHint" hidden>drop gifs/gnw.png here for the G&amp;W silhouette</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ABOUT / ARCHITECTURE ================= 
+  <section id="architecture">
+    <div class="wrap about-grid">
+      <div>
+        <div class="section-head" style="margin-bottom:20px;">
+          <div class="eyebrow">How it works</div>
+          <h2 class="section-title">One Master, Many Modules</h2>
+        </div>
+        <p>
+          Every module in this pack hooks the same per-frame injection point and tints your
+          character based on the current animation and state flags — dash vs. run detection,
+          the autocancel window on aerials, fastfall availability, damage/disadvantage, shieldstun, and
+          whether an L-cancel was missed on landing. These change nothing about your gameplay.
+          Only what you can see.
+        </p>
+        <p>
+          The hook is the entry point every module attaches to — pick exactly one of the three
+          below depending on how you're set up. Then stack whichever modules you want on top of it.
+        </p>
+      </div>
+      <div class="spec">
+        <div class="spec-title">Injection Spec</div>
+        <div class="spec-row"><span class="k">Injection point</span><span class="v">0x8006B8B0</span></div>
+        <div class="spec-row"><span class="k">Frame reference</span><span class="v">r31 (ba)</span></div>
+        <div class="spec-row"><span class="k">Tint fields</span><span class="v">ba+0x4B8 – ba+0x4C4</span></div>
+        <div class="spec-row"><span class="k">Field type</span><span class="v">float, 0–255</span></div>
+        <div class="spec-row"><span class="k">Enable flag</span><span class="v">ba+0x504 (≥ 0x91)</span></div>
+        <div class="spec-row"><span class="k">Code types used</span><span class="v">C2 (hook), 04 / 06 (write)</span></div>
+      </div>
+    </div>
+  </section>
+ -->
+  <!-- ================= HOOKS ================= -->
+  <section id="hooks">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow">Step 1 — Pick exactly one</div>
+        <h2 class="section-title">Master Hook</h2>
+        <p>Every module below attaches to whichever hook you install. Choose the one that matches your setup.</p>
+      </div>
+
+      <div class="hooks-grid">
+
+        <div class="card hook-card" id="hook-full">
+          <div class="hook-kicker">Full Pack</div>
+          <h3>Both Players, Always On</h3>
+          <p>No player-scoping logic — overlays apply to every character on screen, online or offline.</p>
+          <div class="code-block">
+            <div class="code-bar"><span class="tag">Gecko Code</span><button class="copy-btn" type="button">Copy</button></div>
+            <pre><code>$Master Movement Overlay Hook [JacTotum — v12]
+C206B8B0 00000006
+7C0802A6 9421FFF8
+90010004 3C008000
+38002200 7C0903A6
+4E800421 80010004
+38210008 7C0803A6
+60000000 00000000
+06002200 00000040
+7C0802A6 9421FFF8
+90010004 39800000
+483F8291 483F81ED
+480002E9 480004E5
+483F85E1 483F8DDD
+483F8E39 483F83D5
+80010004 38210008
+7C0803A6 4E800020
+04002500 4E800020
+04002700 4E800020
+043FA400 4E800020
+043FA4A0 4E800020
+043FA600 4E800020
+043FA800 4E800020
+043FB000 4E800020
+043FB060 4E800020</code></pre>
+          </div>
+        </div>
+
+        <div class="card hook-card" id="hook-local">
+          <div class="hook-kicker">Slippi — P1 Only</div>
+          <h3>Local Player Only</h3>
+          <p>Checks the Slippi/port state so overlays only render on your own character. Applies to both players offline.</p>
+          <div class="code-block">
+            <div class="code-bar"><span class="tag">Gecko Code</span><button class="copy-btn" type="button">Copy</button></div>
+            <pre><code>$Master Movement Overlay Hook (Slippi LOCAL) [JacTotum — v12, local player only]
+C206B8B0 0000000B
+7C0802A6 9421FFF8
+90010004 3CE08048
+80E79D30 54E7443E
+2C070208 40820018
+80EDB61C 88E70000
+881F000C 7C070000
+40820014 3C008000
+38002200 7C0903A6
+4E800421 80010004
+38210008 7C0803A6
+60000000 00000000
+06002200 00000040
+7C0802A6 9421FFF8
+90010004 39800000
+483FA1F1 480002ED
+480004E9 483F85E5
+483F8DE1 483F8E3D
+483F83D9 80010004
+38210008 7C0803A6
+4E800020 60000000
+04002500 4E800020
+04002700 4E800020
+043FA600 4E800020
+043FA800 4E800020
+043FB000 4E800020
+043FB060 4E800020
+043FC400 4E800020</code></pre>
+          </div>
+        </div>
+
+        <div class="card hook-card" id="hook-opponent">
+          <div class="hook-kicker">Slippi — P2 Only</div>
+          <h3>Opponent Only</h3>
+          <p>Restricts overlays to the opponent, and only during online play. Offline, nothing renders.</p>
+          <div class="code-block">
+            <div class="code-bar"><span class="tag">Gecko Code</span><button class="copy-btn" type="button">Copy</button></div>
+            <pre><code>$Master Movement Overlay Hook (Slippi OPPONENT) [JacTotum — v12, remote player only]
+C206B8B0 0000000B
+7C0802A6 9421FFF8
+90010004 3CE08048
+80E79D30 54E7443E
+2C070208 40820028
+80EDB61C 88E70000
+881F000C 7C070000
+41820014 3C008000
+38002200 7C0903A6
+4E800421 80010004
+38210008 7C0803A6
+60000000 00000000
+06002200 00000040
+7C0802A6 9421FFF8
+90010004 39800000
+483F81F1 480002ED
+480004E9 483F85E5
+483F8DE1 483F8E3D
+483F83D9 80010004
+38210008 7C0803A6
+4E800020 60000000
+04002500 4E800020
+04002700 4E800020
+043FA400 4E800020
+043FA600 4E800020
+043FA800 4E800020
+043FB000 4E800020
+043FB060 4E800020</code></pre>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= MODULES ================= -->
+  <section id="modules">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow">Step 2 — Stack any of these</div>
+        <h2 class="section-title">Overlay Modules</h2>
+        <p>Seven independent state readouts. Install any combination on top of your hook.</p>
+      </div>
+
+      <div class="modules-grid">
+
+        <div class="card module-card" id="mod-dash" style="border-left-color:var(--c-dash);">
+          <div class="module-side">
+            <span class="dot" style="background:var(--c-dash); color:var(--c-dash);"></span>
+            <h3>Dash / Run</h3>
+            <p>Purple while dashing, orange while running — a flash on each transition makes dash-dance timing visible at a glance.</p>
+          <div class="lab-controls" data-mod="dash" hidden></div>
+          </div>
+          <div class="module-main">
+          <div class="gif-slot">
+            <video src="gifs/dash-run.webm" autoplay loop muted playsinline aria-label="Dash / Run overlay preview" title="Dash / Run overlay preview" onerror="this.remove()"></video>
+            <div class="gif-fallback"><span class="gif-fallback__tag">Preview</span><span class="gif-fallback__file">gifs/dash-run.webm</span></div>
+          </div>
+          <div class="code-block">
+            <div class="code-bar"><div class="code-bar-left"><span class="tag">Gecko Code</span><div class="mode-toggle" data-mod="dash"><button type="button" class="on" data-mode="stock">Stock</button><button type="button" data-mode="lab">Color Lab</button></div></div><button class="copy-btn" type="button">Copy</button></div>
+            <pre><code data-mod="dash">$Dash=Purple / Run=Orange Flash [JacTotum]
+06002700 000000D0
+2C0C0000 408200C8
+817F0010 2C0B0014
+41820010 2C0B0015
+41820060 480000B0
+39800001 80FF0894
+3CC03F80 7C073000
+4082009C 3C004300
+901F04B8 38000000
+901F04BC 3C00437F
+901F04C0 3C00C200
+901F04C4 38000000
+901F04C8 901F04CC
+901F04D0 3C00C180
+901F04D4 38000091
+981F0504 48000058
+39800001 80FF0894
+3CC03F80 7C073000
+40820044 3C00437F
+901F04B8 3C00432A
+901F04BC 38000000
+901F04C0 3C00C200
+901F04C4 38000000
+901F04C8 901F04CC
+901F04D0 3C00C180
+901F04D4 38000091
+981F0504 4E800020</code></pre>
+          </div>
+          </div>
+        </div>
+
+        <div class="card module-card" id="mod-ac" style="border-left-color:var(--c-ac);">
+          <div class="module-side">
+            <span class="dot" style="background:var(--c-ac); color:var(--c-ac);"></span>
+            <h3>Autocancel Window</h3>
+            <p>Cyan tint during a valid autocancel window on non-fastfall aerials.</p>
+            <ul class="module-notes">
+
+            </ul>
+          <div class="lab-controls" data-mod="ac" hidden></div>
+          </div>
+          <div class="module-main">
+          <div class="gif-slot">
+            <video src="gifs/ac-window.webm" autoplay loop muted playsinline aria-label="Autocancel window overlay preview" title="Autocancel window overlay preview" onerror="this.remove()"></video>
+            <div class="gif-fallback"><span class="gif-fallback__tag">Preview</span><span class="gif-fallback__file">gifs/ac-window.webm</span></div>
+          </div>
+          <div class="code-block">
+            <div class="code-bar"><div class="code-bar-left"><span class="tag">Gecko Code</span><div class="mode-toggle" data-mod="ac"><button type="button" class="on" data-mode="stock">Stock</button><button type="button" data-mode="lab">Color Lab</button></div></div><button class="copy-btn" type="button">Copy</button></div>
+            <pre><code data-mod="ac">$AC-Window Cyan Tint [JacTotum]
+06002500 000000B0
+2C0C0000 408200A8
+893F0618 5529103A
+3D008000 39082FC0
+7D084A14 80A80000
+817F0010 38EBFFBF
+28070004 41810078
+80FF0084 2C070000
+4181006C 88FF221A
+70E70001 40820060
+80FF2200 28070000
+40820054 38000001
+90080000 39800001
+28050000 40820048
+38000000 901F04B8
+3C00437F 901F04BC
+901F04C0 3C00C1B0
+901F04C4 38000000
+901F04C8 901F04CC
+901F04D0 901F04D4
+38000091 981F0504
+4800000C 38000000
+90080000 4E800020</code></pre>
+          </div>
+          </div>
+        </div>
+
+        <div class="card module-card" id="mod-actionable" style="border-left-color:var(--c-actionable);">
+          <div class="module-side">
+            <span class="dot" style="background:var(--c-actionable); color:var(--c-actionable);"></span>
+            <h3>Actionable</h3>
+            <p>Green the instant your character regains control.</p>
+          <div class="lab-controls" data-mod="actionable" hidden></div>
+          </div>
+          <div class="module-main">
+          <div class="gif-slot">
+            <video src="gifs/actionable.webm" autoplay loop muted playsinline aria-label="Actionable overlay preview" title="Actionable overlay preview" onerror="this.remove()"></video>
+            <div class="gif-fallback"><span class="gif-fallback__tag">Preview</span><span class="gif-fallback__file">gifs/actionable.webm</span></div>
+          </div>
+          <div class="code-block">
+            <div class="code-bar"><div class="code-bar-left"><span class="tag">Gecko Code</span><div class="mode-toggle" data-mod="actionable"><button type="button" class="on" data-mode="stock">Stock</button><button type="button" data-mode="lab">Color Lab</button></div></div><button class="copy-btn" type="button">Copy</button></div>
+            <pre><code data-mod="actionable">$Green When Actionable [JacTotum]
+063FA600 00000070
+2C0C0000 40820064
+80FF0010 2C07000E
+41820010 38E7FFE3
+28070009 41810044
+39800001 3C00437F
+901F04BC 38000000
+901F04B8 901F04C0
+3C004334 901F04C4
+38000000 901F04C8
+901F04CC 901F04D0
+901F04D4 38000091
+981F0504 4800000C
+38000000 981F0504
+4E800020 60000000</code></pre>
+          </div>
+          </div>
+        </div>
+
+        <div class="card module-card" id="mod-TechChase" style="border-left-color:var(--c-TechChase);">
+          <div class="module-side">
+            <span class="dot" style="background:var(--c-TechChase); color:var(--c-TechChase);"></span>
+            <h3>TechChase</h3>
+            <p>Green the instant your character regains control.</p>
+          <div class="lab-controls" data-mod="techchase" hidden></div>
+          </div>
+          <div class="module-main">
+          <div class="gif-slot">
+            <video src="gifs/TechChase.webm" autoplay loop muted playsinline aria-label="TechChase overlay preview" title="TechChase overlay preview" onerror="this.remove()"></video>
+            <div class="gif-fallback"><span class="gif-fallback__tag">Preview</span><span class="gif-fallback__file">gifs/TechChase.webm</span></div>
+          </div>
+          <div class="code-block">
+            <div class="code-bar"><div class="code-bar-left"><span class="tag">Gecko Code</span><div class="mode-toggle" data-mod="techchase"><button type="button" class="on" data-mode="stock">Stock</button><button type="button" data-mode="lab">Color Lab</button></div></div><button class="copy-btn" type="button">Copy</button></div>
+            <pre><code data-mod="techchase">$Tech Animation Colors [JacTotum — requires Master Hook]
+*Yellow=#378542 (tech in place), White=#f8dfad (missed tech)
+*Red=#882D17 (tech roll fwd), Blue=#00A693 (tech roll back)
+*Fixed: removed clear path that was killing Cyan/Purple/Orange on frames 2+
+063FA4A0 00000130
+2C0C0000 40820124
+811F0010 38E8FF39
+28070002 41810018
+2C070000 4182004C
+2C070001 41820074
+480000A0 38E8FF49
+28070001 408100C4
+38E8FF41 28070001
+408100B8 38E8FF44
+28070001 40810010
+38E8FF3C 28070001
+418100D0 2C070000
+41820038 48000064
+39800001 3C00425C
+901F04B8 3C004305
+901F04BC 3C004284
+901F04C0 3C004334
+901F04C4 38000091
+981F0504 48000094
+39800001 3C004308
+901F04B8 3C004234
+901F04BC 3C0041B8
+901F04C0 3C004334
+901F04C4 38000091
+981F0504 48000064
+39800001 38000000
+901F04B8 3C004326
+901F04BC 3C004313
+901F04C0 3C004334
+901F04C4 38000091
+981F0504 48000034
+39800001 3C004378
+901F04B8 3C00435F
+901F04BC 3C00432D
+901F04C0 3C004334
+901F04C4 38000091
+981F0504 48000004
+4E800020 00000000</code></pre>
+          </div>
+          </div>
+        </div>
+
+        <div class="card module-card" id="mod-fastfall" style="border-left-color:var(--c-fastfall);">
+          <div class="module-side">
+            <span class="dot" style="background:var(--c-fastfall); color:var(--c-fastfall);"></span>
+            <h3>Fastfall</h3>
+            <p>Yellow once a fastfall is available. Includes shims tracking when one's been used.</p>
+          <div class="lab-controls" data-mod="fastfall" hidden></div>
+          </div>
+          <div class="module-main">
+          <div class="gif-slot">
+            <video src="gifs/fastfall.webm" autoplay loop muted playsinline aria-label="Fastfall overlay preview" title="Fastfall overlay preview" onerror="this.remove()"></video>
+            <div class="gif-fallback"><span class="gif-fallback__tag">Preview</span><span class="gif-fallback__file">gifs/fastfall.webm</span></div>
+          </div>
+          <div class="code-block">
+            <div class="code-bar"><div class="code-bar-left"><span class="tag">Gecko Code — 3 blocks</span><div class="mode-toggle" data-mod="fastfall"><button type="button" class="on" data-mode="stock">Stock</button><button type="button" data-mode="lab">Color Lab</button></div></div><button class="copy-btn" type="button">Copy</button></div>
+            <pre><code data-mod="fastfall">$Yellow When Fast Fall Available + Shims [JacTotum]
+C207D550 00000005 #Fast Fall Shim — Available
+8803000C 5400103A
+3CC08040 38C6AE00
+7CC60214 38000001
+90060000 80CDAEB4
+60000000 00000000
+C207D588 00000005 #Fast Fall Shim — Used
+8803000C 5400103A
+3C808040 3884AE00
+7C840214 38000000
+90040000 380000FE
+60000000 00000000
+063FA800 000000A0 #Yellow module
+2C0C0000 4082008C
+88DF000C 54C6103A
+3CE08040 38E7AE00
+7CE73214 80DF0010
+38C6FFBF 28060004
+40810014 38C60028
+28060009 40810008
+4800005C 801F0084
+2C000000 41810050
+80C70000 2C060000
+41820040 39800001
+3C00437F 901F04B8
+901F04BC 38000000
+901F04C0 3C004334
+901F04C4 38000000
+901F04C8 901F04CC
+901F04D0 901F04D4
+38000091 981F0504
+4E800020 38000000
+90070000 4BFFFFF4</code></pre>
+          </div>
+          </div>
+        </div>
+
+        <div class="card module-card" id="mod-hitstun" style="border-left-color:var(--c-hitstun);">
+          <div class="module-side">
+            <span class="dot" style="background:var(--c-hitstun); color:var(--c-hitstun);"></span>
+            <h3>Damage / Disadvantage</h3>
+            <p>Hot pink for the duration of damage / disadvantage.</p>
+          <div class="lab-controls" data-mod="hitstun" hidden></div>
+          </div>
+          <div class="module-main">
+          <div class="gif-slot">
+            <video src="gifs/hitstun.webm" autoplay loop muted playsinline aria-label="Damage / Disadvantage overlay preview" title="Damage / Disadvantage overlay preview" onerror="this.remove()"></video>
+            <div class="gif-fallback"><span class="gif-fallback__tag">Preview</span><span class="gif-fallback__file">gifs/hitstun.webm</span></div>
+          </div>
+          <div class="code-block">
+            <div class="code-bar"><div class="code-bar-left"><span class="tag">Gecko Code</span><div class="mode-toggle" data-mod="hitstun"><button type="button" class="on" data-mode="stock">Stock</button><button type="button" data-mode="lab">Color Lab</button></div></div><button class="copy-btn" type="button">Copy</button></div>
+            <pre><code data-mod="hitstun">$Damage / Disadvantage Hot Pink [JacTotum]
+063FB060 00000078
+2C0C0000 40820070
+80FF0010 38E7FFB5
+28070010 40810014
+80FF0010 38E7FF64
+28070001 41810048
+39800001 3C00437F
+901F04B8 38000000
+901F04BC 3C004316
+901F04C0 3C00C200
+901F04C4 38000000
+901F04C8 901F04CC
+901F04D0 901F04D4
+38000091 981F0504
+4800000C 38000000
+981F0504 4E800020</code></pre>
+          </div>
+          </div>
+        </div>
+
+        <div class="card module-card" id="mod-shieldstun" style="border-left-color:var(--c-shieldstun);">
+          <div class="module-side">
+            <span class="dot shieldstun" style="background:var(--c-shieldstun); color:#fff;"></span>
+            <h3>Shieldstun</h3>
+            <p>White while your shield is stunned.</p>
+          <div class="lab-controls" data-mod="shieldstun" hidden></div>
+          </div>
+          <div class="module-main">
+          <div class="gif-slot">
+            <video src="gifs/shieldstun.webm" autoplay loop muted playsinline aria-label="Shieldstun overlay preview" title="Shieldstun overlay preview" onerror="this.remove()"></video>
+            <div class="gif-fallback"><span class="gif-fallback__tag">Preview</span><span class="gif-fallback__file">gifs/shieldstun.webm</span></div>
+          </div>
+          <div class="code-block">
+            <div class="code-bar"><div class="code-bar-left"><span class="tag">Gecko Code</span><div class="mode-toggle" data-mod="shieldstun"><button type="button" class="on" data-mode="stock">Stock</button><button type="button" data-mode="lab">Color Lab</button></div></div><button class="copy-btn" type="button">Copy</button></div>
+            <pre><code data-mod="shieldstun">$Shield Stun White [JacTotum]
+063FB000 00000058
+2C0C0000 40820050
+80FF0010 2C0700B5
+4082003C 39800001
+3C00C200 901F04B8
+901F04BC 901F04C0
+901F04C4 38000000
+901F04C8 901F04CC
+901F04D0 901F04D4
+38000091 981F0504
+4800000C 38000000
+981F0504 4E800020</code></pre>
+          </div>
+          </div>
+        </div>
+
+        <div class="card module-card" id="mod-lcancel" style="border-left-color:var(--c-lcancel);">
+          <div class="module-side">
+            <span class="dot" style="background:var(--c-lcancel); color:var(--c-lcancel);"></span>
+            <h3>Missed L-Cancel</h3>
+            <p>Red flash on landing if the L-cancel window was missed.</p>
+          <div class="lab-controls" data-mod="lcancel" hidden></div>
+          </div>
+          <div class="module-main">
+          <div class="gif-slot">
+            <video src="gifs/lcancel.webm" autoplay loop muted playsinline aria-label="Missed L-cancel overlay preview" title="Missed L-cancel overlay preview" onerror="this.remove()"></video>
+            <div class="gif-fallback"><span class="gif-fallback__tag">Preview</span><span class="gif-fallback__file">gifs/lcancel.webm</span></div>
+          </div>
+          <div class="code-block">
+            <div class="code-bar"><div class="code-bar-left"><span class="tag">Gecko Code</span><div class="mode-toggle" data-mod="lcancel"><button type="button" class="on" data-mode="stock">Stock</button><button type="button" data-mode="lab">Color Lab</button></div></div><button class="copy-btn" type="button">Copy</button></div>
+            <pre><code data-mod="lcancel">$Landing Lag Red [JacTotum]
+063FA400 00000088
+2C0C0000 4082007C
+88DF0618 54C6103A
+3D008040 3908AE50
+7D083214 80FF0010
+38A7FFBF 28050004
+4181000C 88BF067F
+90A80000 38A7FFBA
+28050004 41810044
+80A80000 28050007
+41800038 39800001
+3C00437F 901F04B8
+901F04C4 38000000
+901F04BC 901F04C0
+901F04C8 901F04CC
+901F04D0 901F04D4
+38000091 981F0504
+4E800020 60000000</code></pre>
+          </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ================= COLOR LAB DOCS ================= 
+  <section id="colorlab">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow">Color Lab - under the hood</div>
+        <h2 class="section-title">Roll Your Own Colors</h2>
+        <p>Every module card above has a <b>Stock / Color Lab</b> toggle. Lab mode adds a color picker
+           per state and regenerates the code live - paste it in place of the stock module. Same hook,
+           same behavior, your palette.</p>
+      </div>
+
+      <div class="lab-docs">
+        <div>
+          <h3 style="font-size:17px; margin-bottom:10px;">How a color becomes a Gecko word</h3>
+          <p style="font-size:14px;">
+            The tint fields at <code>ba+0x4B8</code> (R), <code>ba+0x4BC</code> (G) and
+            <code>ba+0x4C0</code> (B) are 32-bit floats holding 0&ndash;255. Every integer in that
+            range fits entirely in the float&rsquo;s top 16 bits, so one
+            <code>lis r0, X</code> - encoded <code>3C00XXXX</code> - builds the whole
+            value, and the <code>901F04B8</code>&nbsp;/&nbsp;<code>BC</code>&nbsp;/&nbsp;<code>C0</code>
+            store that follows drops it into the field. Those load words are the color: in Lab mode
+            they&rsquo;re the <span class="w-r">R</span>&thinsp;/&thinsp;<span class="w-g">G</span>&thinsp;/&thinsp;<span class="w-b">B</span>
+            underlined words, tinted by channel.
+          </p>
+          <p style="font-size:14px;">
+            <code>ba+0x4C4</code> is a fourth blend field - stock modules use values from
+            <code>0xC200</code> (&minus;32) to <code>0x4334</code> (180) there. The Lab keeps each
+            module&rsquo;s stock blend value so only the hue changes. Stock code reuses a single
+            <code>lis</code> when two channels share a value; generated versions give every channel
+            its own load so any color encodes, with branch offsets and block lengths recomputed to
+            match. A generated module <b>replaces</b> its stock counterpart - run one or the
+            other, never both.
+          </p>
+        </div>
+        <div class="spec">
+          <div class="spec-title">Encoding - value &rarr; word</div>
+          <table class="enc-table">
+            <tr><th>Decimal</th><th>float32</th><th>Instruction</th></tr>
+            <tr><td>0</td><td>0x00000000</td><td><b>3C000000</b></td></tr>
+            <tr><td>128</td><td>0x43000000</td><td><b>3C004300</b></td></tr>
+            <tr><td>170</td><td>0x432A0000</td><td><b>3C00432A</b></td></tr>
+            <tr><td>255</td><td>0x437F0000</td><td><b>3C00437F</b></td></tr>
+          </table>
+          <div class="spec-title" style="margin-top:18px;">Field map (r31 = ba)</div>
+          <div class="spec-row"><span class="k">ba+0x4B8</span><span class="v">Red, float 0&ndash;255</span></div>
+          <div class="spec-row"><span class="k">ba+0x4BC</span><span class="v">Green, float 0&ndash;255</span></div>
+          <div class="spec-row"><span class="k">ba+0x4C0</span><span class="v">Blue, float 0&ndash;255</span></div>
+          <div class="spec-row"><span class="k">ba+0x4C4</span><span class="v">Blend (kept stock)</span></div>
+          <div class="spec-row"><span class="k">ba+0x504</span><span class="v">Enable - 0x91</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+-->
+
+  <!-- ================= STATE FORGE ================= -->
+  <section id="forge">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow">Color Lab - build your own</div>
+        <h2 class="section-title">State Forge</h2>
+        <p>Pick any of Melee&rsquo;s 341 universal action states - one or several per overlay -
+           choose a color, and forge a module for them. Forged modules attach to your Master Hook
+           through a one-word extension patch and stack with everything above; stock overlays keep
+           priority when states overlap.</p>
+      </div>
+
+      <div class="forge-grid">
+        <div class="forge-panel">
+          <div class="forge-label">1 - Action states (ba+0x10) &middot; click to toggle, up to 16</div>
+          <input class="forge-search" id="forgeSearch" type="text" placeholder="Search 341 states - e.g. Guard, CliffWait, Escape&hellip;" spellcheck="false">
+          <div class="forge-selinfo"><span id="forgeSelCount">Nothing selected</span><button type="button" id="forgeClear" hidden>Clear selection</button></div>
+          <div class="forge-list" id="forgeList"></div>
+          <div class="forge-row">
+            <div>
+              <div class="forge-label">2 - Color</div>
+              <div class="lab-slot-row">
+                <input type="color" id="forgePick" value="#ff00ff">
+                <input type="text" id="forgeHex" value="#FF00FF" spellcheck="false" maxlength="7">
+              </div>
+            </div>
+            <div>
+              <div class="forge-label">3 - Your Master Hook</div>
+              <div class="forge-hooks" id="forgeHooks">
+                <button type="button" class="on" data-hook="full">Full</button>
+                <button type="button" data-hook="local">Local</button>
+                <button type="button" data-hook="opponent">Opponent</button>
+              </div>
+            </div>
+            <button class="forge-add" id="forgeAdd" type="button" disabled>Add module</button>
+          </div>
+          <div class="forge-preview" id="forgePreview" hidden>
+            <span class="cap" id="forgePrevCap">live preview - forge color</span>
+          </div>
+          <p class="lab-note">Modules pack from 0x803FB800 - a single-state module is 0x64 bytes and each
+             extra state adds one compare pair, so slot addresses shift as the list changes. The patch line
+             redirects the hub&rsquo;s final <b>blr</b> into an extension hub at 0x80002280 that calls
+             your modules, so paste the forge pack <b>after</b> the Master Hook in your .ini. The list
+             below lives in this page session - the pasted code is the saved copy.</p>
+        </div>
+
+        <div class="forge-panel">
+          <div class="forge-label">Forged modules</div>
+          <ul class="forge-queue" id="forgeQueue"></ul>
+          <div class="code-block">
+            <div class="code-bar"><span class="tag">Forge Pack - Gecko Code</span><button class="copy-btn" type="button">Copy</button></div>
+            <pre><code id="forgeCode"></code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= INSTALL ================= -->
+  <section id="install">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow">Step 3</div>
+        <h2 class="section-title">Adding these codes to Dolphin</h2>
+        <p><strong>Pick one Master Hook:</strong> Full Version, Local Player Only, or Opponent Only - and any modules you want. Add it to your Gecko code list by:</p>
+      </div>
+      <ol class="steps">
+        <li><p><strong>Right-click your Melee ISO</strong></p></li>
+        <li><p><strong>Properties</strong></p></li>
+        <li><p><strong>Gecko Codes</strong></p></li>
+        <li><p><strong>Show Defaults</strong></p></li>
+        <li><p><strong>Paste these codes starting with the Master Hook</strong></p></li>
+        <li><p><strong>Save the .ini</strong></p></li>
+        <li><p><strong>Refresh codes</strong></p></li>
+        <li><p><strong>Toggle On/Off the visual aides of your choice.</strong></p></li>
+        <li><p><strong>Boot into a match.</strong></p></li>
+      </ol>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap footer-row">
+    <span>Built by JacTotum</span>
+    <span>Hook v12 — updated 07.18.2026</span>
+  </div>
+</footer>
+
+<script>
+  // Copy-to-clipboard for every code block
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var block = btn.closest('.code-block').querySelector('code');
+      var text = block.innerText;
+      var reset = function(label){
+        setTimeout(function(){ btn.textContent = 'Copy'; }, 1400);
+        btn.textContent = label;
+      };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(function(){
+          reset('Copied ✓');
+        }).catch(function(){
+          reset('Select & copy');
+        });
+      } else {
+        reset('Select & copy');
+      }
+    });
+  });
+
+  // Hero live state demo
+  (function(){
+    var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var marker = document.getElementById('demoMarker');
+    var label = document.getElementById('demoLabel');
+    if(!marker || !label || reduceMotion) return;
+
+    var states = [
+      {label:'ACTIONABLE',       color:'#52ff8c'},
+      {label:'DASH',             color:'#b57bff'},
+      {label:'RUN',              color:'#ff9a3d'},
+      {label:'AC WINDOW',        color:'#49e6ff'},
+      {label:'MISSED L-CANCEL',  color:'#ff5252'},
+      {label:'DAMAGE / DISADVANTAGE', color:'#ff4fb0'},
+      {label:'SHIELDSTUN',       color:'#f7f9fc'},
+      {label:'TECH IN PLACE',    color:'#378542'},
+      {label:'TECH ROLL FWD',    color:'#882D17'},
+      {label:'TECH ROLL BACK',   color:'#00A693'},
+      {label:'MISSED TECH',      color:'#F8DFAD'},
+      {label:'FASTFALL',         color:'#ffe066'}
+    ];
+    var gnwCtx = null, gnwCanvas = null, gnwFrames = [null, null], gnwTick = 0;
+    function loadFrame(src, slot, required){
+      var im = new Image();
+      im.onload = function(){
+        gnwFrames[slot] = im;
+        if(required){
+          gnwCanvas = document.createElement('canvas');
+          gnwCanvas.width = im.naturalWidth;
+          gnwCanvas.height = im.naturalHeight;
+          gnwCtx = gnwCanvas.getContext('2d');
+          marker.classList.add('gnw');
+          marker.style.background = 'transparent';
+          marker.style.boxShadow = 'none';
+          marker.appendChild(gnwCanvas);
+          paint(states[i]);
+        }
+      };
+      im.onerror = function(){
+        if(required){
+          var hint = document.getElementById('gnwHint');
+          if(hint) hint.hidden = false;
+        }
+      };
+      im.src = src;
+    }
+    loadFrame('gifs/gnw.png', 0, true);   // bell at rest
+    loadFrame('gifs/gnw2.png', 1, false); // bell swung — alternates when present
+
+    function paint(s){
+      if(gnwCtx){
+        var avail = gnwFrames.filter(Boolean);
+        var frame = avail[gnwTick % avail.length];
+        gnwTick++;
+        gnwCtx.clearRect(0, 0, gnwCanvas.width, gnwCanvas.height);
+        gnwCtx.globalCompositeOperation = 'source-over';
+        gnwCtx.drawImage(frame, 0, 0);
+        gnwCtx.globalCompositeOperation = 'source-in';
+        gnwCtx.fillStyle = s.color;
+        gnwCtx.fillRect(0, 0, gnwCanvas.width, gnwCanvas.height);
+        gnwCanvas.style.filter = 'drop-shadow(0 0 3px ' + s.color + ')';  /* G&W glow — tweak the 3px */
+      } else {
+        marker.style.background = s.color;
+        marker.style.boxShadow = '0 0 34px 2px ' + s.color;
+      }
+      label.style.color = s.color;
+      label.textContent = s.label;
+    }
+    var i = 0;
+    setInterval(function(){
+      i = (i + 1) % states.length;
+      paint(states[i]);
+    }, 1900);
+  })();
+</script>
+
+
+<script>
+(function(){
+  var MODS = {"dash": {"addr": "002700", "body": ["2C0C0000", "408200C8", "817F0010", "2C0B0014", "41820010", "2C0B0015", "41820060", "480000B0", "39800001", "80FF0894", "3CC03F80", "7C073000", "4082009C", "3C004300", "901F04B8", "3C000000", "901F04BC", "3C00437F", "901F04C0", "3C00C200", "901F04C4", "38000000", "901F04C8", "901F04CC", "901F04D0", "3C00C180", "901F04D4", "38000091", "981F0504", "48000058", "39800001", "80FF0894", "3CC03F80", "7C073000", "40820044", "3C00437F", "901F04B8", "3C00432A", "901F04BC", "3C000000", "901F04C0", "3C00C200", "901F04C4", "38000000", "901F04C8", "901F04CC", "901F04D0", "3C00C180", "901F04D4", "38000091", "981F0504", "4E800020"], "len": "000000D0", "slots": [{"label": "Dash", "default": "#8000FF", "idx": {"r": 13, "g": 15, "b": 17}}, {"label": "Run", "default": "#FFAA00", "idx": {"r": 35, "g": 37, "b": 39}}], "title": "Dash / Run Flash"}, "ac": {"addr": "002500", "body": ["2C0C0000", "408200AC", "893F0618", "5529103A", "3D008000", "39082FC0", "7D084A14", "80A80000", "817F0010", "38EBFFBF", "28070004", "4181007C", "80FF0084", "2C070000", "41810070", "88FF221A", "70E70001", "40820064", "80FF2200", "28070000", "40820058", "38000001", "90080000", "39800001", "28050000", "4082004C", "3C000000", "901F04B8", "3C00437F", "901F04BC", "3C00437F", "901F04C0", "3C00C1B0", "901F04C4", "38000000", "901F04C8", "901F04CC", "901F04D0", "901F04D4", "38000091", "981F0504", "4800000C", "38000000", "90080000", "4E800020"], "len": "000000B4", "slots": [{"label": "AC window", "default": "#00FFFF", "idx": {"r": 26, "g": 28, "b": 30}}], "title": "AC-Window Tint"}, "actionable": {"addr": "3FA600", "body": ["2C0C0000", "40820068", "80FF0010", "2C07000E", "41820010", "38E7FFE3", "28070009", "41810048", "39800001", "3C000000", "901F04B8", "3C00437F", "901F04BC", "3C000000", "901F04C0", "3C004334", "901F04C4", "38000000", "901F04C8", "901F04CC", "901F04D0", "901F04D4", "38000091", "981F0504", "4800000C", "38000000", "981F0504", "4E800020"], "len": "00000070", "slots": [{"label": "Actionable", "default": "#00FF00", "idx": {"r": 9, "g": 11, "b": 13}}], "title": "Green When Actionable"}, "techchase": {"addr": "3FA4A0", "body": ["2C0C0000", "40820124", "811F0010", "38E8FF39", "28070002", "41810018", "2C070000", "4182004C", "2C070001", "41820074", "480000A0", "38E8FF49", "28070001", "408100C4", "38E8FF41", "28070001", "408100B8", "38E8FF44", "28070001", "40810010", "38E8FF3C", "28070001", "418100D0", "2C070000", "41820038", "48000064", "39800001", "3C00425C", "901F04B8", "3C004305", "901F04BC", "3C004284", "901F04C0", "3C004334", "901F04C4", "38000091", "981F0504", "48000094", "39800001", "3C004308", "901F04B8", "3C004234", "901F04BC", "3C0041B8", "901F04C0", "3C004334", "901F04C4", "38000091", "981F0504", "48000064", "39800001", "3C000000", "901F04B8", "3C004326", "901F04BC", "3C004313", "901F04C0", "3C004334", "901F04C4", "38000091", "981F0504", "48000034", "39800001", "3C004378", "901F04B8", "3C00435F", "901F04BC", "3C00432D", "901F04C0", "3C004334", "901F04C4", "38000091", "981F0504", "48000004", "4E800020", "00000000"], "len": "00000130", "slots": [{"label": "Tech in place", "default": "#378542", "idx": {"r": 27, "g": 29, "b": 31}}, {"label": "Tech roll forward", "default": "#882D17", "idx": {"r": 39, "g": 41, "b": 43}}, {"label": "Tech roll back", "default": "#00A693", "idx": {"r": 51, "g": 53, "b": 55}}, {"label": "Missed tech", "default": "#F8DFAD", "idx": {"r": 63, "g": 65, "b": 67}}], "title": "Tech Animation Colors"}, "fastfall": {"addr": "3FA800", "body": ["2C0C0000", "40820090", "88DF000C", "54C6103A", "3CE08040", "38E7AE00", "7CE73214", "80DF0010", "38C6FFBF", "28060004", "40810014", "38C60028", "28060009", "40810008", "48000060", "801F0084", "2C000000", "41810054", "80C70000", "2C060000", "41820044", "39800001", "3C00437F", "901F04B8", "3C00437F", "901F04BC", "3C000000", "901F04C0", "3C004334", "901F04C4", "38000000", "901F04C8", "901F04CC", "901F04D0", "901F04D4", "38000091", "981F0504", "4E800020", "38000000", "90070000", "4BFFFFF4"], "len": "000000A4", "slots": [{"label": "Fastfall", "default": "#FFFF00", "idx": {"r": 22, "g": 24, "b": 26}}], "shims": ["C207D550 00000005", "8803000C 5400103A", "3CC08040 38C6AE00", "7CC60214 38000001", "90060000 80CDAEB4", "60000000 00000000", "C207D588 00000005", "8803000C 5400103A", "3C808040 3884AE00", "7C840214 38000000", "90040000 380000FE", "60000000 00000000"], "title": "Fastfall Available + Shims", "note": "Both C2 shims are emitted unchanged; only the color module is regenerated."}, "hitstun": {"addr": "3FB060", "body": ["2C0C0000", "40820070", "80FF0010", "38E7FFB5", "28070010", "40810014", "80FF0010", "38E7FF64", "28070001", "41810048", "39800001", "3C00437F", "901F04B8", "3C000000", "901F04BC", "3C004316", "901F04C0", "3C00C200", "901F04C4", "38000000", "901F04C8", "901F04CC", "901F04D0", "901F04D4", "38000091", "981F0504", "4800000C", "38000000", "981F0504", "4E800020"], "len": "00000078", "slots": [{"label": "Damage / Disadvantage", "default": "#FF0096", "idx": {"r": 11, "g": 13, "b": 15}}], "title": "Damage / Disadvantage Tint"}, "shieldstun": {"addr": "3FB100", "body": ["2C0C0000", "4082005C", "80FF0010", "2C0700B5", "40820048", "39800001", "3C00437F", "901F04B8", "3C00437F", "901F04BC", "3C00437F", "901F04C0", "3C00C200", "901F04C4", "38000000", "901F04C8", "901F04CC", "901F04D0", "901F04D4", "38000091", "981F0504", "4800000C", "38000000", "981F0504", "4E800020"], "len": "00000064", "slots": [{"label": "Shieldstun", "default": "#FFFFFF", "idx": {"r": 6, "g": 8, "b": 10}}], "redirect": "043FB000 48000100", "title": "Shield Stun Tint", "note": "Custom version relocates the module body to free space at 0x803FB100 via a one-word redirect at 0x803FB000; the stock code packs all four fields into one load, which can\u2019t hold an arbitrary color in place without overrunning the Damage / Disadvantage module."}, "lcancel": {"addr": "3FA400", "body": ["2C0C0000", "40820088", "88DF0618", "54C6103A", "3D008040", "3908AE50", "7D083214", "80FF0010", "38A7FFBF", "28050004", "4181000C", "88BF067F", "90A80000", "38A7FFBA", "28050004", "41810050", "80A80000", "28050007", "41800044", "39800001", "3C00437F", "901F04B8", "3C000000", "901F04BC", "3C000000", "901F04C0", "3C00437F", "901F04C4", "3C000000", "901F04C8", "901F04CC", "901F04D0", "901F04D4", "38000091", "981F0504", "4E800020"], "len": "00000090", "slots": [{"label": "Missed L-cancel", "default": "#FF0000", "idx": {"r": 20, "g": 22, "b": 24}}], "title": "Landing Lag Flash"}};
+
+  function encHi(v){
+    var b = new ArrayBuffer(4), dv = new DataView(b);
+    dv.setFloat32(0, v);
+    return dv.getUint32(0) >>> 16;
+  }
+  function lisWord(v){
+    return '3C00' + ('0000' + encHi(v).toString(16).toUpperCase()).slice(-4);
+  }
+  function parseHex(s){
+    s = String(s).trim().replace(/^#/,'');
+    if(/^[0-9a-f]{3}$/i.test(s)) s = s.replace(/./g, function(c){return c+c;});
+    if(!/^[0-9a-f]{6}$/i.test(s)) return null;
+    return [parseInt(s.slice(0,2),16), parseInt(s.slice(2,4),16), parseInt(s.slice(4,6),16)];
+  }
+  function toHex(rgb){
+    return '#' + rgb.map(function(v){return ('0'+v.toString(16).toUpperCase()).slice(-2);}).join('');
+  }
+  function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+
+  var state = {}, mode = {}, stockHTML = {};
+  Object.keys(MODS).forEach(function(id){
+    state[id] = MODS[id].slots.map(function(s){ return parseHex(s['default']); });
+    mode[id] = 'stock';
+  });
+
+  function codeEl(id){ return document.querySelector('code[data-mod="'+id+'"]'); }
+  function controlsEl(id){ return document.querySelector('.lab-controls[data-mod="'+id+'"]'); }
+
+  function renderLab(id){
+    var m = MODS[id], body = m.body.slice(), chan = {};
+    m.slots.forEach(function(slot, si){
+      var rgb = state[id][si];
+      ['r','g','b'].forEach(function(c, ci){
+        var wi = slot.idx[c];
+        body[wi] = lisWord(rgb[ci]);
+        chan[wi] = 'w-' + c;
+      });
+    });
+    var custom = m.slots.some(function(s,si){ return toHex(state[id][si]) !== toHex(parseHex(s['default'])); });
+    var tag = custom ? ' (Custom ' + m.slots.map(function(s,si){return toHex(state[id][si]);}).join(' / ') + ')' : '';
+    var lines = [esc('$' + m.title + tag + ' [JacTotum]')];
+    if(custom) lines.push(esc('*Generated by the Color Lab — replaces the stock module'));
+    if(m.redirect) lines.push(esc(m.redirect));
+    if(m.shims) m.shims.forEach(function(l){ lines.push(esc(l)); });
+    lines.push(esc('06' + m.addr + ' ' + m.len));
+    var padded = body.slice();
+    if(padded.length % 2) padded.push('00000000');
+    for(var i=0;i<padded.length;i+=2){
+      var wa = chan[i]   ? '<span class="'+chan[i]+'">'+padded[i]+'</span>'     : padded[i];
+      var wb = chan[i+1] ? '<span class="'+chan[i+1]+'">'+padded[i+1]+'</span>' : padded[i+1];
+      lines.push(wa + ' ' + wb);
+    }
+    codeEl(id).innerHTML = lines.join('\n');
+  }
+
+  function buildControls(id){
+    var holder = controlsEl(id);
+    MODS[id].slots.forEach(function(slot, si){
+      var wrap = document.createElement('div');
+      wrap.className = 'lab-slot';
+      var lab = document.createElement('div');
+      lab.className = 'lab-slot-label';
+      lab.textContent = slot.label;
+      var row = document.createElement('div');
+      row.className = 'lab-slot-row';
+      var pick = document.createElement('input'); pick.type = 'color';
+      var text = document.createElement('input'); text.type = 'text';
+      text.spellcheck = false; text.maxLength = 7;
+      function setUI(rgb){ pick.value = toHex(rgb).toLowerCase(); text.value = toHex(rgb); }
+      setUI(state[id][si]);
+      pick.addEventListener('input', function(){
+        var rgb = parseHex(pick.value);
+        state[id][si] = rgb; text.value = toHex(rgb); text.classList.remove('bad');
+        renderLab(id);
+      });
+      text.addEventListener('input', function(){
+        var rgb = parseHex(text.value);
+        if(rgb){ state[id][si] = rgb; pick.value = toHex(rgb).toLowerCase(); text.classList.remove('bad'); renderLab(id); }
+        else { text.classList.add('bad'); }
+      });
+      text.addEventListener('blur', function(){
+        text.value = toHex(state[id][si]); text.classList.remove('bad');
+      });
+      row.appendChild(pick); row.appendChild(text);
+      wrap.appendChild(lab); wrap.appendChild(row);
+      holder.appendChild(wrap);
+      slot._setUI = setUI;
+    });
+    var reset = document.createElement('button');
+    reset.type = 'button'; reset.className = 'lab-reset'; reset.textContent = 'Reset to stock';
+    reset.addEventListener('click', function(){
+      MODS[id].slots.forEach(function(slot, si){
+        state[id][si] = parseHex(slot['default']);
+        slot._setUI(state[id][si]);
+      });
+      renderLab(id);
+    });
+    holder.appendChild(reset);
+    if(MODS[id].note){
+      var n = document.createElement('p');
+      n.className = 'lab-note'; n.textContent = MODS[id].note;
+      holder.appendChild(n);
+    }
+  }
+
+  function setMode(id, next){
+    if(mode[id] === next) return;
+    mode[id] = next;
+    var el = codeEl(id);
+    if(next === 'lab'){
+      renderLab(id);
+      controlsEl(id).hidden = false;
+    } else {
+      el.innerHTML = stockHTML[id];
+      controlsEl(id).hidden = true;
+    }
+    document.querySelectorAll('.mode-toggle[data-mod="'+id+'"] button').forEach(function(b){
+      b.classList.toggle('on', b.getAttribute('data-mode') === next);
+    });
+  }
+
+  Object.keys(MODS).forEach(function(id){
+    var el = codeEl(id);
+    if(!el) return;
+    stockHTML[id] = el.innerHTML;
+    buildControls(id);
+  });
+
+  document.querySelectorAll('.mode-toggle button').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      setMode(btn.closest('.mode-toggle').getAttribute('data-mod'), btn.getAttribute('data-mode'));
+    });
+  });
+})();
+</script>
+
+
+<script>
+(function(){
+  var F = {"states": [[0, "DeadDown"], [1, "DeadLeft"], [2, "DeadRight"], [3, "DeadUp"], [4, "DeadUpStar"], [5, "DeadUpStarIce"], [6, "DeadUpFall"], [7, "DeadUpFallHitCamera"], [8, "DeadUpFallHitCameraFlat"], [9, "DeadUpFallIce"], [10, "DeadUpFallHitCameraIce"], [11, "Sleep"], [12, "Rebirth"], [13, "RebirthWait"], [14, "Wait"], [15, "WalkSlow"], [16, "WalkMiddle"], [17, "WalkFast"], [18, "Turn"], [19, "TurnRun"], [20, "Dash"], [21, "Run"], [22, "RunDirect"], [23, "RunBrake"], [24, "KneeBend"], [25, "JumpF"], [26, "JumpB"], [27, "JumpAerialF"], [28, "JumpAerialB"], [29, "Fall"], [30, "FallF"], [31, "FallB"], [32, "FallAerial"], [33, "FallAerialF"], [34, "FallAerialB"], [35, "FallSpecial"], [36, "FallSpecialF"], [37, "FallSpecialB"], [38, "DamageFall"], [39, "Squat"], [40, "SquatWait"], [41, "SquatRv"], [42, "Landing"], [43, "LandingFallSpecial"], [44, "Attack11"], [45, "Attack12"], [46, "Attack13"], [47, "Attack100Start"], [48, "Attack100Loop"], [49, "Attack100End"], [50, "AttackDash"], [51, "AttackS3Hi"], [52, "AttackS3HiS"], [53, "AttackS3S"], [54, "AttackS3LwS"], [55, "AttackS3Lw"], [56, "AttackHi3"], [57, "AttackLw3"], [58, "AttackS4Hi"], [59, "AttackS4HiS"], [60, "AttackS4S"], [61, "AttackS4LwS"], [62, "AttackS4Lw"], [63, "AttackHi4"], [64, "AttackLw4"], [65, "AttackAirN"], [66, "AttackAirF"], [67, "AttackAirB"], [68, "AttackAirHi"], [69, "AttackAirLw"], [70, "LandingAirN"], [71, "LandingAirF"], [72, "LandingAirB"], [73, "LandingAirHi"], [74, "LandingAirLw"], [75, "DamageHi1"], [76, "DamageHi2"], [77, "DamageHi3"], [78, "DamageN1"], [79, "DamageN2"], [80, "DamageN3"], [81, "DamageLw1"], [82, "DamageLw2"], [83, "DamageLw3"], [84, "DamageAir1"], [85, "DamageAir2"], [86, "DamageAir3"], [87, "DamageFlyHi"], [88, "DamageFlyN"], [89, "DamageFlyLw"], [90, "DamageFlyTop"], [91, "DamageFlyRoll"], [92, "LightGet"], [93, "HeavyGet"], [94, "LightThrowF"], [95, "LightThrowB"], [96, "LightThrowHi"], [97, "LightThrowLw"], [98, "LightThrowDash"], [99, "LightThrowDrop"], [100, "LightThrowAirF"], [101, "LightThrowAirB"], [102, "LightThrowAirHi"], [103, "LightThrowAirLw"], [104, "HeavyThrowF"], [105, "HeavyThrowB"], [106, "HeavyThrowHi"], [107, "HeavyThrowLw"], [108, "LightThrowF4"], [109, "LightThrowB4"], [110, "LightThrowHi4"], [111, "LightThrowLw4"], [112, "LightThrowAirF4"], [113, "LightThrowAirB4"], [114, "LightThrowAirHi4"], [115, "LightThrowAirLw4"], [116, "HeavyThrowF4"], [117, "HeavyThrowB4"], [118, "HeavyThrowHi4"], [119, "HeavyThrowLw4"], [120, "SwordSwing1"], [121, "SwordSwing3"], [122, "SwordSwing4"], [123, "SwordSwingDash"], [124, "BatSwing1"], [125, "BatSwing3"], [126, "BatSwing4"], [127, "BatSwingDash"], [128, "ParasolSwing1"], [129, "ParasolSwing3"], [130, "ParasolSwing4"], [131, "ParasolSwingDash"], [132, "HarisenSwing1"], [133, "HarisenSwing3"], [134, "HarisenSwing4"], [135, "HarisenSwingDash"], [136, "StarRodSwing1"], [137, "StarRodSwing3"], [138, "StarRodSwing4"], [139, "StarRodSwingDash"], [140, "LipStickSwing1"], [141, "LipStickSwing3"], [142, "LipStickSwing4"], [143, "LipStickSwingDash"], [144, "ItemParasolOpen"], [145, "ItemParasolFall"], [146, "ItemParasolFallSpecial"], [147, "ItemParasolDamageFall"], [148, "LGunShoot"], [149, "LGunShootAir"], [150, "LGunShootEmpty"], [151, "LGunShootAirEmpty"], [152, "FireFlowerShoot"], [153, "FireFlowerShootAir"], [154, "ItemScrew"], [155, "ItemScrewAir"], [156, "DamageScrew"], [157, "DamageScrewAir"], [158, "ItemScopeStart"], [159, "ItemScopeRapid"], [160, "ItemScopeFire"], [161, "ItemScopeEnd"], [162, "ItemScopeAirStart"], [163, "ItemScopeAirRapid"], [164, "ItemScopeAirFire"], [165, "ItemScopeAirEnd"], [166, "ItemScopeStartEmpty"], [167, "ItemScopeRapidEmpty"], [168, "ItemScopeFireEmpty"], [169, "ItemScopeEndEmpty"], [170, "ItemScopeAirStartEmpty"], [171, "ItemScopeAirRapidEmpty"], [172, "ItemScopeAirFireEmpty"], [173, "ItemScopeAirEndEmpty"], [174, "LiftWait"], [175, "LiftWalk1"], [176, "LiftWalk2"], [177, "LiftTurn"], [178, "GuardOn"], [179, "Guard"], [180, "GuardOff"], [181, "GuardSetOff"], [182, "GuardReflect"], [183, "DownBoundU"], [184, "DownWaitU"], [185, "DownDamageU"], [186, "DownStandU"], [187, "DownAttackU"], [188, "DownFowardU"], [189, "DownBackU"], [190, "DownSpotU"], [191, "DownBoundD"], [192, "DownWaitD"], [193, "DownDamageD"], [194, "DownStandD"], [195, "DownAttackD"], [196, "DownFowardD"], [197, "DownBackD"], [198, "DownSpotD"], [199, "Passive"], [200, "PassiveStandF"], [201, "PassiveStandB"], [202, "PassiveWall"], [203, "PassiveWallJump"], [204, "PassiveCeil"], [205, "ShieldBreakFly"], [206, "ShieldBreakFall"], [207, "ShieldBreakDownU"], [208, "ShieldBreakDownD"], [209, "ShieldBreakStandU"], [210, "ShieldBreakStandD"], [211, "FuraFura"], [212, "Catch"], [213, "CatchPull"], [214, "CatchDash"], [215, "CatchDashPull"], [216, "CatchWait"], [217, "CatchAttack"], [218, "CatchCut"], [219, "ThrowF"], [220, "ThrowB"], [221, "ThrowHi"], [222, "ThrowLw"], [223, "CapturePulledHi"], [224, "CaptureWaitHi"], [225, "CaptureDamageHi"], [226, "CapturePulledLw"], [227, "CaptureWaitLw"], [228, "CaptureDamageLw"], [229, "CaptureCut"], [230, "CaptureJump"], [231, "CaptureNeck"], [232, "CaptureFoot"], [233, "EscapeF"], [234, "EscapeB"], [235, "Escape"], [236, "EscapeAir"], [237, "ReboundStop"], [238, "Rebound"], [239, "ThrownF"], [240, "ThrownB"], [241, "ThrownHi"], [242, "ThrownLw"], [243, "ThrownLwWomen"], [244, "Pass"], [245, "Ottotto"], [246, "OttottoWait"], [247, "FlyReflectWall"], [248, "FlyReflectCeil"], [249, "StopWall"], [250, "StopCeil"], [251, "MissFoot"], [252, "CliffCatch"], [253, "CliffWait"], [254, "CliffClimbSlow"], [255, "CliffClimbQuick"], [256, "CliffAttackSlow"], [257, "CliffAttackQuick"], [258, "CliffEscapeSlow"], [259, "CliffEscapeQuick"], [260, "CliffJumpSlow1"], [261, "CliffJumpSlow2"], [262, "CliffJumpQuick1"], [263, "CliffJumpQuick2"], [264, "AppealR"], [265, "AppealL"], [266, "ShoulderedWait"], [267, "ShoulderedWalkSlow"], [268, "ShoulderedWalkMiddle"], [269, "ShoulderedWalkFast"], [270, "ShoulderedTurn"], [271, "ThrownFF"], [272, "ThrownFB"], [273, "ThrownFHi"], [274, "ThrownFLw"], [275, "CaptureCaptain"], [276, "CaptureYoshi"], [277, "YoshiEgg"], [278, "CaptureKoopa"], [279, "CaptureDamageKoopa"], [280, "CaptureWaitKoopa"], [281, "ThrownKoopaF"], [282, "ThrownKoopaB"], [283, "CaptureKoopaAir"], [284, "CaptureDamageKoopaAir"], [285, "CaptureWaitKoopaAir"], [286, "ThrownKoopaAirF"], [287, "ThrownKoopaAirB"], [288, "CaptureKirby"], [289, "CaptureWaitKirby"], [290, "ThrownKirbyStar"], [291, "ThrownCopyStar"], [292, "ThrownKirby"], [293, "BarrelWait"], [294, "Bury"], [295, "BuryWait"], [296, "BuryJump"], [297, "DamageSong"], [298, "DamageSongWait"], [299, "DamageSongRv"], [300, "DamageBind"], [301, "CaptureMewtwo"], [302, "CaptureMewtwoAir"], [303, "ThrownMewtwo"], [304, "ThrownMewtwoAir"], [305, "WarpStarJump"], [306, "WarpStarFall"], [307, "HammerWait"], [308, "HammerWalk"], [309, "HammerTurn"], [310, "HammerKneeBend"], [311, "HammerFall"], [312, "HammerJump"], [313, "HammerLanding"], [314, "KinokoGiantStart"], [315, "KinokoGiantStartAir"], [316, "KinokoGiantEnd"], [317, "KinokoGiantEndAir"], [318, "KinokoSmallStart"], [319, "KinokoSmallStartAir"], [320, "KinokoSmallEnd"], [321, "KinokoSmallEndAir"], [322, "Entry"], [323, "EntryStart"], [324, "EntryEnd"], [325, "DamageIce"], [326, "DamageIceJump"], [327, "CaptureMasterHand"], [328, "CapturedamageMasterHand"], [329, "CaptureWaitMasterHand"], [330, "ThrownMasterHand"], [331, "CaptureKirbyYoshi"], [332, "KirbyYoshiEgg"], [333, "CaptureRedead"], [334, "CaptureLikeLike"], [335, "DownReflect"], [336, "CaptureCrazyHand"], [337, "CapturedamageCrazyHand"], [338, "CaptureWaitCrazyHand"], [339, "ThrownCrazyHand"], [340, "BarrelCannonWait"]], "ext": 2147492480, "slot0": 2151659520, "limit": 2151662592, "maxMods": 12, "maxStates": 16, "patch": {"full": "0400223C 48000044", "local": "04002238 48000048", "opponent": "04002238 48000048"}};
+
+  function encHi(v){
+    var b = new ArrayBuffer(4), dv = new DataView(b);
+    dv.setFloat32(0, v);
+    return dv.getUint32(0) >>> 16;
+  }
+  function lisWord(v){
+    return '3C00' + ('0000' + encHi(v).toString(16).toUpperCase()).slice(-4);
+  }
+  function parseHex(s){
+    s = String(s).trim().replace(/^#/,'');
+    if(/^[0-9a-f]{3}$/i.test(s)) s = s.replace(/./g, function(c){return c+c;});
+    if(!/^[0-9a-f]{6}$/i.test(s)) return null;
+    return [parseInt(s.slice(0,2),16), parseInt(s.slice(2,4),16), parseInt(s.slice(4,6),16)];
+  }
+  function toHex(rgb){
+    return '#' + rgb.map(function(v){return ('0'+v.toString(16).toUpperCase()).slice(-2);}).join('');
+  }
+  function h8(n){ return ('00000000' + (n >>> 0).toString(16).toUpperCase()).slice(-8); }
+  function h4(n){ return ('0000' + n.toString(16).toUpperCase()).slice(-4); }
+  function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+  function nameOf(id){ return F.states[id][1]; }
+
+  var selected = [], color = [255,0,255], hook = 'full', queue = [];
+
+  var listEl = document.getElementById('forgeList'),
+      searchEl = document.getElementById('forgeSearch'),
+      selCount = document.getElementById('forgeSelCount'),
+      clearBtn = document.getElementById('forgeClear'),
+      addBtn = document.getElementById('forgeAdd'),
+      queueEl = document.getElementById('forgeQueue'),
+      codeEl = document.getElementById('forgeCode'),
+      pick = document.getElementById('forgePick'),
+      hexIn = document.getElementById('forgeHex');
+
+  // ---- T-pose live preview -------------------------------------------
+  var prevBox = document.getElementById('forgePreview'),
+      prevCap = document.getElementById('forgePrevCap'),
+      prevCtx = null, prevCanvas = null, prevImg = new Image();
+  prevImg.onload = function(){
+    prevCanvas = document.createElement('canvas');
+    prevCanvas.width = prevImg.naturalWidth;
+    prevCanvas.height = prevImg.naturalHeight;
+    prevCtx = prevCanvas.getContext('2d');
+    prevBox.insertBefore(prevCanvas, prevCap);
+    prevBox.hidden = false;
+    drawPrev();
+  };
+  prevImg.onerror = function(){
+    prevBox.hidden = false;
+    prevCap.textContent = 'drop gifs/gnw-tpose.png for the forge preview';
+  };
+  prevImg.src = 'gifs/gnw-tpose.png';
+  function drawPrev(){
+    if(!prevCtx) return;
+    var c = toHex(color);
+    prevCtx.clearRect(0, 0, prevCanvas.width, prevCanvas.height);
+    prevCtx.globalCompositeOperation = 'source-over';
+    prevCtx.drawImage(prevImg, 0, 0);
+    prevCtx.globalCompositeOperation = 'source-in';
+    prevCtx.fillStyle = c;
+    prevCtx.fillRect(0, 0, prevCanvas.width, prevCanvas.height);
+    prevCanvas.style.filter = 'drop-shadow(0 0 3px ' + c + ')';  /* forge preview glow */
+  }
+
+  // ---- code generation ------------------------------------------------
+  function moduleWords(ids, rgb){
+    var k = ids.length, P = 3 + 2*k;                 // paint; clear=P+17; blr=P+19
+    var w = ['2C0C0000', h8(0x40820000 | ((P + 18) * 4)), '80FF0010'];
+    for(var i = 0; i < k - 1; i++){
+      w.push('2C07' + h4(ids[i]));
+      w.push(h8(0x41820000 | ((P - (4 + 2*i)) * 4)));
+    }
+    w.push('2C07' + h4(ids[k-1]));
+    w.push('40820048');
+    w.push('39800001', lisWord(rgb[0]), '901F04B8', lisWord(rgb[1]), '901F04BC',
+           lisWord(rgb[2]), '901F04C0', '3C004334', '901F04C4', '38000000',
+           '901F04C8', '901F04CC', '901F04D0', '901F04D4', '38000091', '981F0504',
+           '4800000C', '38000000', '981F0504', '4E800020');
+    return w;
+  }
+  function layout(q){
+    var addr = F.slot0, out = [];
+    q.forEach(function(m){
+      var w = moduleWords(m.ids, m.rgb);
+      out.push({addr: addr, words: w, m: m});
+      addr += Math.ceil(w.length * 4 / 8) * 8;
+    });
+    return {entries: out, end: addr};
+  }
+  function extHub(entries){
+    var w = ['7C0802A6','9421FFF8','90010004'];
+    entries.forEach(function(e, i){
+      var pc = F.ext + (3 + i) * 4;
+      var disp = e.addr - pc;
+      w.push(h8(0x48000001 | (disp & 0x03FFFFFC)));
+    });
+    w.push('80010004','38210008','7C0803A6','4E800020');
+    return w;
+  }
+  function pairs(words, chan){
+    var out = [], b = words.slice();
+    if(b.length % 2) b.push('00000000');
+    for(var i = 0; i < b.length; i += 2){
+      var wa = (chan && chan[i])   ? '<span class="'+chan[i]+'">'+b[i]+'</span>'     : b[i];
+      var wb = (chan && chan[i+1]) ? '<span class="'+chan[i+1]+'">'+b[i+1]+'</span>' : b[i+1];
+      out.push(wa + ' ' + wb);
+    }
+    return out;
+  }
+
+  // ---- rendering ------------------------------------------------------
+  function renderList(){
+    var q = searchEl.value.trim().toLowerCase();
+    var frag = document.createDocumentFragment(), shown = 0;
+    F.states.forEach(function(st){
+      var id = st[0], name = st[1];
+      var hx = '0x' + h4(id).slice(1);
+      if(q && name.toLowerCase().indexOf(q) === -1 && hx.toLowerCase().indexOf(q) === -1 && String(id) !== q) return;
+      shown++;
+      var b = document.createElement('button');
+      b.type = 'button';
+      if(selected.indexOf(id) !== -1) b.className = 'sel';
+      b.innerHTML = '<span>' + esc(name) + '</span><span class="fid">' + hx + ' &middot; ' + id + '</span>';
+      b.addEventListener('click', function(){
+        var at = selected.indexOf(id);
+        if(at !== -1) selected.splice(at, 1);
+        else if(selected.length < F.maxStates) selected.push(id);
+        renderList(); syncSel(); syncAdd();
+      });
+      frag.appendChild(b);
+    });
+    listEl.innerHTML = '';
+    if(shown === 0){
+      var d = document.createElement('div');
+      d.className = 'forge-empty';
+      d.textContent = 'No state matches \u201C' + searchEl.value.trim() + '\u201D; try a shorter fragment.';
+      listEl.appendChild(d);
+    } else {
+      listEl.appendChild(frag);
+    }
+  }
+
+  function syncSel(){
+    if(selected.length === 0){
+      selCount.textContent = 'Nothing selected';
+      clearBtn.hidden = true;
+    } else {
+      selCount.textContent = selected.length + ' of ' + F.maxStates + '; ' + selected.map(nameOf).join(', ');
+      clearBtn.hidden = false;
+    }
+  }
+
+  function forgedIds(){
+    var s = {};
+    queue.forEach(function(m){ m.ids.forEach(function(id){ s[id] = true; }); });
+    return s;
+  }
+
+  function syncAdd(){
+    var taken = forgedIds();
+    var dup = selected.some(function(id){ return taken[id]; });
+    var probe = queue.concat([{ids: selected.length ? selected : [0], rgb: color}]);
+    var fits = layout(probe).end <= F.limit;
+    addBtn.disabled = selected.length === 0 || dup || queue.length >= F.maxMods || !fits;
+    addBtn.textContent =
+      selected.length === 0 ? 'Add module' :
+      dup ? 'State already forged' :
+      queue.length >= F.maxMods ? 'Module limit (' + F.maxMods + ')' :
+      !fits ? 'Out of room' :
+      'Add module (' + selected.length + ' state' + (selected.length > 1 ? 's' : '') + ')';
+  }
+
+  function renderQueue(){
+    var lay = layout(queue);
+    queueEl.innerHTML = '';
+    if(queue.length === 0){
+      var li = document.createElement('li');
+      li.className = 'forge-queue-empty';
+      li.textContent = 'No modules yet; region 0x3FB800\u20130x3FC400 open.';
+      li.style.border = 'none';
+      queueEl.appendChild(li);
+      return;
+    }
+    lay.entries.forEach(function(e, i){
+      var m = e.m;
+      var li = document.createElement('li');
+      var chip = document.createElement('span');
+      chip.className = 'chip'; chip.style.background = toHex(m.rgb);
+      var names = document.createElement('span');
+      names.className = 'names';
+      names.textContent = m.ids.map(nameOf).join(', ');
+      names.title = names.textContent + '; ' + toHex(m.rgb);
+      var addr = document.createElement('span');
+      addr.className = 'addr';
+      addr.textContent = '0x' + h8(e.addr).slice(2);
+      var rm = document.createElement('button');
+      rm.type = 'button'; rm.className = 'rm'; rm.textContent = 'Remove';
+      rm.addEventListener('click', function(){
+        queue.splice(i, 1);
+        renderQueue(); renderCode(); syncAdd();
+      });
+      li.appendChild(chip); li.appendChild(names); li.appendChild(addr); li.appendChild(rm);
+      queueEl.appendChild(li);
+    });
+  }
+
+  function renderCode(){
+    if(queue.length === 0){
+      codeEl.textContent = '(no modules forged yet; pick states and a color, then Add module)';
+      return;
+    }
+    var lay = layout(queue);
+    var allNames = [];
+    queue.forEach(function(m){ m.ids.forEach(function(id){ allNames.push(nameOf(id)); }); });
+    var lines = [];
+    lines.push(esc('$Forge Pack ' + allNames.join(', ') + " [JT's Technicolor Training Pack]"));
+    lines.push(esc('*Requires the ' + hook.toUpperCase() + ' Master Hook; paste AFTER the hook'));
+    lines.push(esc(F.patch[hook]));
+    var hub = extHub(lay.entries);
+    lines.push(esc('06' + h8(F.ext).slice(2) + ' ' + h8(hub.length * 4)));
+    lines = lines.concat(pairs(hub));
+    lay.entries.forEach(function(e){
+      var P = 3 + 2 * e.m.ids.length;
+      var chan = {}; chan[P+1] = 'w-r'; chan[P+3] = 'w-g'; chan[P+5] = 'w-b';
+      lines.push(esc('*' + e.m.ids.map(nameOf).join(', ') + '; ' + toHex(e.m.rgb)));
+      lines.push(esc('06' + h8(e.addr).slice(2) + ' ' + h8(e.words.length * 4)));
+      lines = lines.concat(pairs(e.words, chan));
+    });
+    codeEl.innerHTML = lines.join('\n');
+  }
+  var _rc = renderCode;
+  renderCode = function(){
+    _rc();
+    document.dispatchEvent(new CustomEvent('forge:changed', {detail: {count: queue.length}}));
+  };
+
+  // ---- wiring ---------------------------------------------------------
+  searchEl.addEventListener('input', renderList);
+  clearBtn.addEventListener('click', function(){
+    selected = [];
+    renderList(); syncSel(); syncAdd();
+  });
+  pick.addEventListener('input', function(){
+    color = parseHex(pick.value);
+    hexIn.value = toHex(color); hexIn.classList.remove('bad');
+    syncAdd(); drawPrev();
+  });
+  hexIn.addEventListener('input', function(){
+    var rgb = parseHex(hexIn.value);
+    if(rgb){ color = rgb; pick.value = toHex(rgb).toLowerCase(); hexIn.classList.remove('bad'); syncAdd(); drawPrev(); }
+    else { hexIn.classList.add('bad'); }
+  });
+  hexIn.addEventListener('blur', function(){
+    hexIn.value = toHex(color); hexIn.classList.remove('bad');
+  });
+  document.querySelectorAll('#forgeHooks button').forEach(function(b){
+    b.addEventListener('click', function(){
+      hook = b.getAttribute('data-hook');
+      document.querySelectorAll('#forgeHooks button').forEach(function(x){
+        x.classList.toggle('on', x === b);
+      });
+      renderCode();
+    });
+  });
+  addBtn.addEventListener('click', function(){
+    if(selected.length === 0) return;
+    queue.push({ids: selected.slice(), rgb: color.slice()});
+    selected = [];
+    renderList(); syncSel();
+    renderQueue(); renderCode(); syncAdd();
+  });
+
+  renderList(); syncSel(); renderQueue(); renderCode(); syncAdd();
+})();
+</script>
+
+
+<script>
+(function(){
+  var ORDER = ['dash','ac','actionable','techchase','fastfall','hitstun','shieldstun','lcancel'];
+  var sel = {}, hook = 'full', forgeCount = 0;
+
+  var badges = document.getElementById('qcBadges'),
+      copyBtn = document.getElementById('qcCopy'),
+      allBtn = document.getElementById('qcAll'),
+      hint = document.getElementById('qcHint');
+
+  function modBtns(){ return badges.querySelectorAll('button[data-mod]'); }
+  function count(){ return ORDER.filter(function(m){ return sel[m]; }).length + (sel.forge ? 1 : 0); }
+
+  function sync(){
+    modBtns().forEach(function(b){
+      b.classList.toggle('on', !!sel[b.getAttribute('data-mod')]);
+    });
+    var n = count();
+    copyBtn.textContent = n === 0 ? 'Copy hook only'
+      : 'Copy hook + ' + n + ' code' + (n > 1 ? 's' : '');
+    var all = ORDER.every(function(m){ return sel[m]; });
+    allBtn.textContent = all ? 'Clear all' : 'Select all';
+  }
+
+  function ensureForgeBadge(){
+    var b = badges.querySelector('button[data-mod="forge"]');
+    if(forgeCount > 0){
+      if(!b){
+        b = document.createElement('button');
+        b.type = 'button';
+        b.setAttribute('data-mod','forge');
+        badges.appendChild(b);
+        b.addEventListener('click', function(){
+          sel.forge = !sel.forge; sync();
+        });
+      }
+      b.innerHTML = '<span class="dot" style="background:var(--text-dim); color:var(--text-dim);"></span>Forge Pack (' + forgeCount + ')';
+    } else if(b){
+      b.remove();
+      sel.forge = false;
+    }
+    sync();
+  }
+
+  function hookText(){
+    var el = document.querySelector('#hook-' + hook + ' code');
+    return el ? el.innerText.trim() : '';
+  }
+  function modText(m){
+    var el = document.querySelector('code[data-mod="' + m + '"]');
+    return el ? el.innerText.trim() : '';
+  }
+  function forgeText(){
+    // align the forge section's hook with the quick-copy choice so the patch matches
+    var fb = document.querySelector('#forgeHooks button[data-hook="' + hook + '"]');
+    if(fb && !fb.classList.contains('on')) fb.click();
+    var el = document.getElementById('forgeCode');
+    return el ? el.innerText.trim() : '';
+  }
+
+  function buildPaste(){
+    var parts = [hookText()];
+    ORDER.forEach(function(m){ if(sel[m]) parts.push(modText(m)); });
+    if(sel.forge && forgeCount > 0) parts.push(forgeText());
+    return parts.filter(Boolean).join('\n\n');
+  }
+
+  modBtns().forEach(function(b){
+    b.addEventListener('click', function(){
+      var m = b.getAttribute('data-mod');
+      sel[m] = !sel[m]; sync();
+    });
+  });
+  allBtn.addEventListener('click', function(){
+    var all = ORDER.every(function(m){ return sel[m]; });
+    ORDER.forEach(function(m){ sel[m] = !all; });
+    if(all) sel.forge = false;
+    sync();
+  });
+  document.querySelectorAll('#qcHooks button').forEach(function(b){
+    b.addEventListener('click', function(){
+      hook = b.getAttribute('data-hook');
+      document.querySelectorAll('#qcHooks button').forEach(function(x){
+        x.classList.toggle('on', x === b);
+      });
+    });
+  });
+  copyBtn.addEventListener('click', function(){
+    var text = buildPaste();
+    var done = function(label){
+      copyBtn.textContent = label;
+      setTimeout(sync, 1600);
+    };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){
+        done('Copied \u2713');
+        hint.textContent = 'Tl;dr Copy Pasta right into Dolphin. See Steps at bottom for more help with setup.';
+      }).catch(function(){ done('Copy blocked; use the card buttons'); });
+    } else {
+      done('Copy blocked; use the card buttons');
+    }
+  });
+  document.addEventListener('forge:changed', function(e){
+    forgeCount = e.detail.count;
+    ensureForgeBadge();
+  });
+
+  sync();
+})();
+</script>
+
+</body>
+</html>
